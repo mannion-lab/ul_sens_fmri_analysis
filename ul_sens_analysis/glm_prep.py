@@ -27,7 +27,7 @@ def run(subj_id, acq_date):
     log_dir = os.path.join(subj_dir, "logs")
     log_path = os.path.join(
         log_dir,
-        "{s:s}-loc_glm-log.txt".format(s=inf_str)
+        "{s:s}-glm_prep-log.txt".format(s=inf_str)
     )
 
     logger = logging.getLogger()
