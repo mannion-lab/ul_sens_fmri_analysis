@@ -25,7 +25,10 @@ def run(subj_id, acq_date):
     glm_dir = os.path.join(subj_dir, conf.ana.glm_dir)
 
     log_dir = os.path.join(subj_dir, "logs")
-    log_path = "{s:s}-loc_glm-log.txt".format(s=inf_str)
+    log_path = os.path.join(
+        log_dir,
+        "{s:s}-loc_glm-log.txt".format(s=inf_str)
+    )
 
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
@@ -37,152 +40,8 @@ def run(subj_id, acq_date):
 
     mask_paths = _loc_to_mask(subj_id, acq_date, conf)
 
-    data = _extract_data(subj_id, acq_date, conf, mask_paths)
+    _extract_data(subj_id, acq_date, conf, mask_paths)
 
-    _save_data_to_niml(subj_id, acq_date, conf, data)
-
-    return data
-
-    cond_details = [{}, {}]
-
-    # first, write the condition files
-    for (i_vf, vf) in enumerate(("above", "below")):
-        for (i_src_loc, src_loc) in enumerate(("upper", "lower")):
-
-            onset_path = "{s:s}-{v:s}_{l:s}-onsets.txt".format(
-                s=inf_str, v=vf, l=src_loc
-            )
-
-            with open(onset_path, "w") as onset_file:
-
-                for run_num in xrange(1, conf.exp.n_runs + 1):
-
-                    run_onsets = []
-
-                    run_seq = np.load(
-                        os.path.join(
-                            subj_dir,
-                            "logs",
-                            "{s:s}_ul_sens_fmri_run_{n:02d}_seq.npy".format(
-                                s=subj_id, n=run_num
-                            )
-                        )
-                    )
-
-                    run_seq = run_seq[i_vf, ...]
-
-                    n_trials = run_seq.shape[0]
-
-                    for i_trial in xrange(n_trials):
-
-                        trial_ok = np.logical_and(
-                            run_seq[i_trial, 2] > 0.5,  # not null
-                            run_seq[i_trial, 1] == (i_src_loc + 1)
-                        )
-
-                        if trial_ok:
-                            run_onsets.append(run_seq[i_trial, 0])
-
-                    run_str = ["{n:.0f}".format(n=n) for n in run_onsets]
-
-                    onset_file.write(" ".join(run_str) + "\n")
-
-
-    for vf in ("above", "below"):
-
-        for run_num in xrange(1, conf.exp.n_runs + 1):
-
-            for roi_name in [conf.ana.rois[1]]:
-
-                i_roi = str(fmri_tools.utils.get_visual_area_lut()[roi_name])
-
-                for hemi in ("lh", "rh"):
-
-                    run_path = os.path.join(
-                        subj_dir,
-                        "func",
-                        "run_{n:02d}".format(n=run_num),
-                        "{s:s}-run_{n:02d}-uw-{h:s}_nf.niml.dset".format(
-                            s=inf_str, n=run_num, h=hemi
-                        )
-                    )
-
-                    roi_path = os.path.join(
-                        conf.ana.roi_dir,
-                        subj_id,
-                        "rois",
-                        "{s:s}_vis_loc_--rois-{h:s}_nf.niml.dset".format(
-                            s=subj_id, h=hemi
-                        )
-                    )
-
-                    loc_path = os.path.join(
-                        subj_dir,
-                        conf.ana.loc_glm_dir,
-                        "{s:s}-loc_{v:s}-glm-{h:s}_nf.niml.dset".format(
-                            s=inf_str, v=vf, h=hemi
-                        )
-                    ) + "[" + conf.ana.loc_glm_brick + "]"
-
-                    act_mask_expr = (
-                        "'-a " +
-                        loc_path +
-                        " -expr step(a-" +
-                        conf.ana.loc_glm_thresh +
-                        ")'"
-                    )
-
-                    # dump!
-                    cmd = [
-                        "3dTstat",
-                        "-mean",
-                        "-prefix", "stat",
-                        "-mask", roi_path,
-                        "-mrange", i_roi, i_roi,
-                        "-cmask", act_mask_expr,
-                        "-overwrite",
-                        run_path
-                    ]
-
-                    runcmd.run_cmd(" ".join(cmd))
-
-                    return
-
-
-    for hemi in ("lh", "rh"):
-
-        run_paths = [
-            os.path.join(
-                subj_dir,
-                "func",
-                "run_{n:02d}".format(n=run_num),
-                "{s:s}-run_{n:02d}-uw-{h:s}_nf.niml.dset".format(
-                    s=inf_str, n=run_num, h=hemi
-                )
-            )
-            for run_num in range(1, conf.exp.n_runs + 1)
-        ]
-
-        for (i_vf, vf) in enumerate(("above", "below")):
-
-            glm_filename = "{s:s}-loc_{v:s}-glm-{h:s}_nf.niml.dset".format(
-                s=inf_str, h=hemi, v=vf
-            )
-
-            beta_filename = "{s:s}-loc_{v:s}-beta-{h:s}_nf.niml.dset".format(
-                s=inf_str, h=hemi, v=vf
-            )
-
-            fmri_tools.analysis.glm(
-                run_paths=run_paths,
-                output_dir=loc_glm_dir,
-                glm_filename=glm_filename,
-                beta_filename=beta_filename,
-                tr_s=conf.ana.tr_s,
-                cond_details=[cond_details[i_vf]],
-                contrast_details=[],
-                censor_str=conf.ana.censor_str
-            )
 
 def _loc_to_mask(subj_id, acq_date, conf):
 
@@ -244,6 +103,8 @@ def _extract_data(subj_id, acq_date, conf, mask_paths):
     subj_dir = os.path.join(conf.ana.base_subj_dir, subj_id)
 
     mask_dir = os.path.join(subj_dir, "loc_analysis")
+
+    analysis_dir = os.path.join(subj_dir, "analysis")
 
     data = np.empty(
         (
@@ -332,34 +193,8 @@ def _extract_data(subj_id, acq_date, conf, mask_paths):
 
     assert np.sum(np.isnan(data)) == 0
 
-    return data
+    os.chdir(analysis_dir)
 
+    data_path = "{s:s}-data.npy".format(s=inf_str)
 
-def _save_data_to_niml(subj_id, acq_date, conf, data):
-
-    inf_str = subj_id + "_ul_sens_" + acq_date
-
-    subj_dir = os.path.join(conf.ana.base_subj_dir, subj_id)
-
-    glm_dir = os.path.join(subj_dir, conf.ana.glm_dir)
-
-    os.chdir(glm_dir)
-
-    nodes = np.arange(1, data.shape[0] + 1)
-
-    for (i_vf, vf) in enumerate(("above", "below")):
-
-        data_filename = "{s:s}-{v:s}-data.niml.dset".format(
-            s=inf_str, v=vf
-        )
-
-        cmd = [
-            "ConvertDset",
-            "-i_1D",
-        ]
-
-
-
-
-
-
+    np.save(data_path, data)
