@@ -161,8 +161,8 @@ def _extract_data(subj_id, acq_date, conf, mask_paths):
             # average over hemispheres
             hemi_data = np.mean(hemi_data, axis=-1)
 
-            run_path = "{s:s}-run_{n:02d}-uw-data.txt".format(
-                s=inf_str, n=run_num
+            run_path = "{s:s}-run_{n:02d}-uw-{vf:s}_data.txt".format(
+                s=inf_str, n=run_num, vf=vf
             )
 
             np.savetxt(run_path, hemi_data)
@@ -173,8 +173,8 @@ def _extract_data(subj_id, acq_date, conf, mask_paths):
 
             np.savetxt(run_nodes_path, map(int, conf.ana.roi_numbers))
 
-            run_path_niml = "{s:s}-run_{n:02d}-uw-data.niml.dset".format(
-                s=inf_str, n=run_num
+            run_path_niml = "{s:s}-run_{n:02d}-uw-{vf:s}_data.niml.dset".format(
+                s=inf_str, n=run_num, vf=vf
             )
 
             cmd = [
