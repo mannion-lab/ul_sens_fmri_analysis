@@ -1,6 +1,4 @@
-
 import os
-import itertools
 import logging
 
 import numpy as np
@@ -25,7 +23,10 @@ def run(subj_id, acq_date):
 
     log_dir = os.path.join(subj_dir, "logs")
 
-    log_path = "{s:s}-loc_glm-log.txt".format(s=inf_str)
+    log_path = os.path.join(
+        log_dir,
+        "{s:s}-loc_glm-log.txt".format(s=inf_str)
+    )
 
     logger = logging.getLogger()
     logger.setLevel(logging.INFO)
@@ -35,16 +36,20 @@ def run(subj_id, acq_date):
 
     os.chdir(loc_glm_dir)
 
-    cond_details = [{}, {}]
+    cond_details = {}
 
     # first, write the condition files
+    # here, i_vf of 0 is above, 1 is below
     for (i_vf, vf) in enumerate(("above", "below")):
 
+        # this is the file to write
         onset_path = "{s:s}-{v:s}_onsets.txt".format(s=inf_str, v=vf)
 
-        cond_details[i_vf]["name"] = vf
-        cond_details[i_vf]["onsets_path"] = onset_path
-        cond_details[i_vf]["model"] = conf.ana.hrf_model
+        cond_details[vf] = {
+            "name": vf,
+            "onsets_path": onset_path,
+            "model": conf.ana.hrf_model
+        }
 
         with open(onset_path, "w") as onset_file:
 
@@ -52,6 +57,13 @@ def run(subj_id, acq_date):
 
                 run_onsets = []
 
+                # run seq is (pres loc, trial number, trial info)
+                # where trial info is:
+                #   0: time, in seconds, when it starts
+                #   1: source location 1 for above, 2 for below, 0 for null
+                #   2: image id
+                #   3: whether it is in the 'pre' events
+                #   4: been prepped
                 run_seq = np.load(
                     os.path.join(
                         subj_dir,
@@ -62,19 +74,36 @@ def run(subj_id, acq_date):
                     )
                 )
 
+                # pull out this visual field location - either above or below
                 run_seq = run_seq[i_vf, ...]
 
+                # axis 0 is now trials
                 n_trials = run_seq.shape[0]
 
                 for i_trial in xrange(n_trials):
 
+                    # this check is for the image id, that it is greater than 0
+                    # (in a floating point safe way)
+                    # image IDs of 0 are null trials
                     if run_seq[i_trial, 2] > 0.5:
+                        # append the onset time to the run onsets for this
+                        # visual field location (we don't care about the source
+                        # at the moment)
                         run_onsets.append(run_seq[i_trial, 0])
 
+                    # just check that this is indeed a null trial
+                    else:
+                        assert run_seq[i_trial, 1] == 0
+
+                # still inside the run loop - format the onsets as integers
+                # (they will always be multiples of 4, which is the bin length)
                 run_str = ["{n:.0f}".format(n=n) for n in run_onsets]
 
+                # each run is a row in the onsets file, so write it out and
+                # then move on to the next run
                 onset_file.write(" ".join(run_str) + "\n")
 
+    # now for the actual GLM, where we want to loop over hemispheres
     for hemi in ("lh", "rh"):
 
         run_paths = [
@@ -89,12 +118,15 @@ def run(subj_id, acq_date):
             for run_num in range(1, conf.exp.n_runs + 1)
         ]
 
-        for (i_vf, vf) in enumerate(("above", "below")):
+        # run the above and below GLMs separately
+        for vf in ("above", "below"):
 
+            # output GLM
             glm_filename = "{s:s}-loc_{v:s}-glm-{h:s}_nf.niml.dset".format(
                 s=inf_str, h=hemi, v=vf
             )
 
+            # output betas
             beta_filename = "{s:s}-loc_{v:s}-beta-{h:s}_nf.niml.dset".format(
                 s=inf_str, h=hemi, v=vf
             )
@@ -105,7 +137,7 @@ def run(subj_id, acq_date):
                 glm_filename=glm_filename,
                 beta_filename=beta_filename,
                 tr_s=conf.ana.tr_s,
-                cond_details=[cond_details[i_vf]],
-                contrast_details=[],
+                cond_details=[cond_details[vf]],
+                contrast_details=[],  # no contrasts necessary
                 censor_str=conf.ana.censor_str
             )
