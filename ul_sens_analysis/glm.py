@@ -1,4 +1,3 @@
-
 import os
 import logging
 
@@ -54,6 +53,7 @@ def _run_glm(subj_id, acq_date, conf, cond_details):
 
     for vf in ("above", "below"):
 
+        # these files have three nodes, one for each visual area
         run_paths = [
             os.path.join(
                 subj_dir,
@@ -66,14 +66,17 @@ def _run_glm(subj_id, acq_date, conf, cond_details):
             for run_num in range(1, conf.exp.n_runs + 1)
         ]
 
+        # to write
         glm_filename = "{s:s}-{v:s}-glm-.niml.dset".format(
             s=inf_str, v=vf
         )
 
+        # to write
         beta_filename = "{s:s}-{v:s}-beta-.niml.dset".format(
             s=inf_str, v=vf
         )
 
+        # run the GLM on this visual field location
         fmri_tools.analysis.glm(
             run_paths=run_paths,
             output_dir=glm_dir,
@@ -84,6 +87,41 @@ def _run_glm(subj_id, acq_date, conf, cond_details):
             contrast_details=[],
             censor_str=conf.ana.censor_str,
             matrix_filename="exp_design_" + vf
+        )
+
+        # now to convert the beta weights to percent signal change
+
+        # baseline timecourse
+        bltc_filename = "{s:s}-{v:s}-bltc-.niml.dset".format(
+            s=inf_str, v=vf
+        )
+
+        # baseline
+        bl_filename = "{s:s}-{v:s}-bltc-.niml.dset".format(
+            s=inf_str, v=vf
+        )
+
+        # psc
+        psc_filename = "{s:s}-{v:s}-psc-.niml.dset".format(
+            s=inf_str, v=vf
+        )
+
+        beta_bricks = "[40,41]"
+
+        # check the beta bricks are as expected
+        assert (
+            fmri_tools.utils.get_dset_label(beta_filename + beta_bricks) ==
+            [vf + "_upper#0", vf + "_lower#0"]
+        )
+
+        # run the PSC conversion
+        fmri_tools.utils.beta_to_psc(
+            beta_path=beta_filename,
+            beta_bricks=beta_bricks,
+            design_path="exp_design_" + vf + ".xmat.1D",
+            bltc_path=bltc_filename,
+            bl_path=bl_filename,
+            psc_path=psc_filename,
         )
 
         data_filename = "{s:s}-{v:s}-data-amp.txt".format(
@@ -97,11 +135,12 @@ def _run_glm(subj_id, acq_date, conf, cond_details):
             "3dmaskdump",
             "-noijk",
             "-o", data_filename,
-            glm_filename + "[1..$(2)]"
+            psc_filename
         ]
 
         runcmd.run_cmd(" ".join(cmd))
 
+        # save the betas as text file also, for exploration / checking
         b_filename = "{s:s}-{v:s}-beta-amp.txt".format(
             s=inf_str, v=vf
         )
@@ -125,23 +164,31 @@ def _prep_conds(subj_id, acq_date, conf):
 
     subj_dir = os.path.join(conf.ana.base_subj_dir, subj_id)
 
+    analysis_dir = os.path.join(subj_dir, "analysis")
+
     details = {}
 
     for (i_vf, vf) in enumerate(("above", "below")):
 
-        cond_details = [{}, {}]
+        cond_details = []
 
+        # now we're also interested in the image source location
         for (i_source, source) in enumerate(("upper", "lower")):
 
-            cond_details[i_source]["name"] = source
-
-            onsets_path = "{s:s}-{v:s}_{sl:s}_onsets.txt".format(
-                s=inf_str, v=vf, sl=source
+            onsets_path = os.path.join(
+                analysis_dir,
+                "{s:s}-{v:s}_{sl:s}_onsets.txt".format(
+                    s=inf_str, v=vf, sl=source
+                )
             )
 
-            cond_details[i_source]["onsets_path"] = onsets_path
-
-            cond_details[i_source]["model"] = conf.ana.hrf_model
+            cond_details.append(
+                {
+                    "name": vf + "_" + source,
+                    "onsets_path": onsets_path,
+                    "model": conf.ana.hrf_model
+                }
+            )
 
             with open(onsets_path, "w") as onsets_file:
 
@@ -165,9 +212,19 @@ def _prep_conds(subj_id, acq_date, conf):
 
                     for i_trial in xrange(n_trials):
 
+                        # this checks that the source location (index 1)
+                        # matches the current source location under
+                        # consideration. The latter is 0-based, so need to
+                        # increment by 1
                         trial_ok = (run_seq[i_trial, 1] == (i_source + 1))
 
                         if trial_ok:
+
+                            # since the trial is 'ok', then it should have a
+                            # valid image ID. Let's check
+                            assert run_seq[i_trial, 2] > 0.5
+
+                            # append the onset time
                             run_onsets.append(run_seq[i_trial, 0])
 
                     run_str = ["{n:.0f}".format(n=n) for n in run_onsets]
