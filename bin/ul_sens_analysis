@@ -1,0 +1,40 @@
+#! /usr/bin/env python2
+
+"Handles command-line input for the fMRI analysis"
+
+import argparse
+
+import ul_sens_analysis.loc_glm
+import ul_sens_analysis.glm_prep
+import ul_sens_analysis.glm
+
+
+def main():
+    "Parse the command-line input and offload"
+
+    proc_options = {
+        "loc_glm": ul_sens_analysis.loc_glm.run,
+        "glm_prep": ul_sens_analysis.glm_prep.run,
+        "glm": ul_sens_analysis.glm.run
+    }
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("subj_id", help="Subject ID")
+    parser.add_argument("acq_date", help="Acquisition date")
+
+    parser.add_argument(
+        "proc_step",
+        help="Processing step",
+        choices=proc_options.keys()
+    )
+
+    args = parser.parse_args()
+
+    proc_func = proc_options[args.proc_step]
+
+    proc_func(subj_id=args.subj_id, acq_date=args.acq_date)
+
+
+if __name__ == "__main__":
+    main()
