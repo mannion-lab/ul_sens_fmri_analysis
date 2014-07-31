@@ -229,5 +229,8 @@ def run(subj_id, acq_date):
                         roi_data[:, i_a], roi_data[:, i_b]
                     )[1, 0]
 
+    rdm = 1 - corr_mat
 
-    return corr_mat
+    rdm_filename = "{s:s}-rsa-rdm-.npy".format(s=inf_str)
+
+    np.save(rdm_filename, rdm)
