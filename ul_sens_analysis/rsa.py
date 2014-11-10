@@ -189,13 +189,14 @@ def run(subj_id, acq_date):
             if os.path.exists(data_filename):
                 os.remove(data_filename)
 
+            # want the t-value for each image
             cmd = [
                 "3dmaskdump",
                 "-noijk",
                 "-mask", mask_path,
                 "-o", data_filename,
                 mask_path,
-                beta_filename + "[40..$]"
+                glm_filename + "[2..$(2)]"
             ]
 
             runcmd.run_cmd(" ".join(cmd))

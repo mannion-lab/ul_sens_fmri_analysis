@@ -1,7 +1,7 @@
 
 import os
 
-import fmri_tools
+import fmri_tools.utils
 
 import ul_sens_fmri.config
 
@@ -53,5 +53,15 @@ def get_conf():
 
     conf.loc_glm_brick = "2"
     conf.loc_glm_thresh = "2.58"
+
+    conf.subj_info = [
+        ["p1001", "20140714"],
+        ["p1003", "20140922"],
+        ["p1006", "20140728"],
+        ["p1008", "20140714"],
+        ["p1004", "20140929"],
+        ["p1010", "20141103"],
+        ["p1011", "20141020"]
+    ]
 
     return conf
