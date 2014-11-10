@@ -28,6 +28,7 @@ def get_conf():
 
     conf.base_dir = "/sci/study/ul_sens"
     conf.base_subj_dir = os.path.join(conf.base_dir, "subj_data")
+    conf.base_group_dir = os.path.join(conf.base_dir, "group_data")
 
     conf.loc_glm_dir = "loc_analysis"
     conf.rsa_dir = "rsa"
