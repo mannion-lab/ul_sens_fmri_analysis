@@ -236,37 +236,3 @@ def _prep_conds(subj_id, acq_date, conf):
     return details
 
 
-def get_glm_results(conf, subj_info=None):
-
-    if subj_info is None:
-        subj_info = conf.subj_info
-
-    data = np.empty(
-        (
-            len(subj_info),
-            len(conf.roi_names),
-            2,  # above, below
-            2   # lower, upper
-        )
-    )
-    data.fill(np.NAN)
-
-    for (i_subj, (subj_id, acq_date)) in enumerate(subj_info):
-
-        for (i_vf, vf) in enumerate(["below", "above"]):
-
-            data[i_subj, :, i_vf, :] = np.loadtxt(
-                os.path.join(
-                    conf.base_subj_dir,
-                    subj_id,
-                    "analysis",
-                    (
-                        subj_id + "_ul_sens_" + acq_date + "-" +
-                        vf + "-data-amp.txt"
-                    )
-                )
-            )
-
-    assert np.sum(np.isnan(data)) == 0
-
-    return data

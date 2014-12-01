@@ -55,6 +55,11 @@ def get_conf():
     conf.loc_glm_brick = "2"
     conf.loc_glm_thresh = "2.58"
 
+    conf.source_colours = [
+        [241 / 255.0, 163 / 255.0, 64 / 255.0],  # above
+        [153 / 255.0, 142 / 255.0, 195 / 255.0]  # below
+    ]
+
     conf.subj_info = [
         ["p1001", "20140714"],
         ["p1003", "20140922"],
