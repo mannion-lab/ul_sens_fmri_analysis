@@ -90,7 +90,7 @@ def plot_amps_visual_area(save_path, i_va):
     )
 
     symbols = ["o", "s"]
-    labels = ["Lower", "Upper"]
+    labels = ["Upper", "Lower"]
     colours = conf.source_colours
     marker_size = 20
 
@@ -144,7 +144,7 @@ def plot_amps_visual_area(save_path, i_va):
 
     leg = plt.legend(
         scatterpoints=1,
-        loc=(0.5, -0.1),
+        loc=(-0.05, -0.1),
         handletextpad=0
     )
     leg.draw_frame(False)

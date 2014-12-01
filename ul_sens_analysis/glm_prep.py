@@ -168,6 +168,16 @@ def _extract_data(subj_id, acq_date, conf, mask_paths):
                 # ... which we don't want to log!
                 cmd_out = runcmd.run_cmd(" ".join(cmd), log_stdout=False)
 
+                # check the header for correctness
+                roi_header = cmd_out.std_out.splitlines()[1].split("\t")[-3:]
+
+                # make sure that the columns are what I think they are
+                for (roi_head, roi_index) in zip(
+                    roi_header,
+                    conf.ana.roi_numbers
+                ):
+                    assert roi_head.strip() == "Mean_" + roi_index
+
                 # we want to clip out the header and the info lines
                 run_data = cmd_out.std_out.splitlines()[3::2]
 

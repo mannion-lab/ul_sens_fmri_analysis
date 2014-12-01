@@ -21,15 +21,15 @@ def resp_amps(conf, subj_info=None):
         (
             len(subj_info),
             len(conf.roi_names),
-            2,  # above, below
-            2   # lower, upper
+            2,  # pres_loc: above, below
+            2   # src_loc: upper, lower
         )
     )
     data.fill(np.NAN)
 
     for (i_subj, (subj_id, acq_date)) in enumerate(subj_info):
 
-        for (i_vf, vf) in enumerate(["below", "above"]):
+        for (i_vf, vf) in enumerate(["above", "below"]):
 
             data[i_subj, :, i_vf, :] = np.loadtxt(
                 os.path.join(
@@ -48,7 +48,8 @@ def resp_amps(conf, subj_info=None):
     subj_mean = np.mean(
         np.mean(
             np.mean(data, axis=-1),
-            axis=-1),
+            axis=-1
+        ),
         axis=-1
     )
 
