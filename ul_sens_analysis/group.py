@@ -12,6 +12,55 @@ import ul_sens_analysis.config
 import ul_sens_fmri.config
 
 
+def resp_amps(conf, subj_info=None):
+
+    if subj_info is None:
+        subj_info = conf.subj_info
+
+    data = np.empty(
+        (
+            len(subj_info),
+            len(conf.roi_names),
+            2,  # above, below
+            2   # lower, upper
+        )
+    )
+    data.fill(np.NAN)
+
+    for (i_subj, (subj_id, acq_date)) in enumerate(subj_info):
+
+        for (i_vf, vf) in enumerate(["below", "above"]):
+
+            data[i_subj, :, i_vf, :] = np.loadtxt(
+                os.path.join(
+                    conf.base_subj_dir,
+                    subj_id,
+                    "analysis",
+                    (
+                        subj_id + "_ul_sens_" + acq_date + "-" +
+                        vf + "-data-amp.txt"
+                    )
+                )
+            )
+
+    assert np.sum(np.isnan(data)) == 0
+
+    subj_mean = np.mean(
+        np.mean(
+            np.mean(data, axis=-1),
+            axis=-1),
+        axis=-1
+    )
+
+    grand_mean = np.mean(data)
+
+    norm_data = (
+        data - subj_mean[:, np.newaxis, np.newaxis, np.newaxis]
+    ) + grand_mean
+
+    return (data, norm_data)
+
+
 def rdms():
 
     conf = ul_sens_fmri.config.get_conf()
