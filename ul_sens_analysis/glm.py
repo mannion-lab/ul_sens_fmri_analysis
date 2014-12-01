@@ -234,5 +234,3 @@ def _prep_conds(subj_id, acq_date, conf):
         details[vf] = cond_details
 
     return details
-
-
