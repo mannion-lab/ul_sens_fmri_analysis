@@ -2,6 +2,7 @@ import os
 import logging
 
 import numpy as np
+import scipy.stats
 
 import fmri_tools.analysis
 import fmri_tools.utils
@@ -205,7 +206,7 @@ def _write_onsets(subj_id, acq_date, conf, vf, runs_type, log_dir):
     details = []
 
     # image ID
-    for (i_img, img_id) in enumerate(conf.exp.img_ids):
+    for img_id in conf.exp.img_ids:
 
         # source location
         for (i_sl, sl) in enumerate(("upper", "lower")):
@@ -233,7 +234,7 @@ def _write_onsets(subj_id, acq_date, conf, vf, runs_type, log_dir):
 
             with open(onset_path, "w") as onset_file:
 
-                for (i_run, run_seq) in enumerate(run_seqs):
+                for run_seq in run_seqs:
 
                     run_onsets = []
 
@@ -343,17 +344,27 @@ def run_rdm(subj_id, acq_date):
 
             for (i_roi, roi_id) in enumerate(conf.ana.roi_numbers):
 
-                in_roi = vf_data[:, 0].astype("int") == int(roi_id)
+                in_roi = data[:, 0].astype("int") == int(roi_id)
 
+                assert np.all(data[in_roi, 0].astype("int") == int(roi_id))
+
+                # roi_data becomes IMG_u, IMG_l, IMG_u, IMG_l ...
                 roi_data = data[in_roi, 1:]
+
+                # change it so it is IMG_u, IMG_u, ..., IMG_l, IMG_l
+                i_arrange = (
+                    range(0, n_cond, 2) +  # upper
+                    range(1, n_cond, 2)    # lower
+                )
+                roi_data = roi_data[:, i_arrange]
 
                 for i_a in xrange(n_cond):
                     for i_b in xrange(n_cond):
 
-                        rdm = 1 - np.corrcoef(
+                        rdm = 1 - scipy.stats.pearsonr(
                             roi_data[:, i_a],
                             roi_data[:, i_b]
-                        )[1, 0]
+                        )[0]
 
                         rdms[i_roi, i_run_type, i_vf, i_a, i_b] = rdm
 
