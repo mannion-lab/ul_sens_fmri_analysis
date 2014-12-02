@@ -1,0 +1,46 @@
+#! /usr/bin/env python2
+
+"Handles command-line input for the fMRI analysis"
+
+import os
+import argparse
+
+import ul_sens_analysis.figures
+import ul_sens_analysis.config
+
+
+def main():
+    "Parse the command-line input and offload"
+
+    proc_options = [
+        "resp_amp",
+        "resp_amp_roi",
+        "rdms"
+    ]
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "proc_step",
+        help="Processing step",
+        choices=proc_options
+    )
+
+    args = parser.parse_args()
+
+    conf = ul_sens_analysis.config.get_conf()
+
+    if args.proc_step == "resp_amp":
+        ul_sens_analysis.group.resp_amps(conf=conf)
+    elif args.proc_step == "resp_amp_roi":
+        save_path = os.path.join(
+            conf.base_fig_dir,
+            "ul_sens_resp_amp_roi"
+        )
+        ul_sens_analysis.figures.plot_amps(save_path=save_path)
+    elif args.proc_step == "rdms":
+        ul_sens_analysis.group.rdms()
+
+
+if __name__ == "__main__":
+    main()
