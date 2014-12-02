@@ -62,6 +62,29 @@ def resp_amps(conf, subj_info=None):
     return (data, norm_data)
 
 
+def save_resp_amps_for_spss(data, txt_path):
+
+    (n_subj, n_rois, n_pres, n_src) = data.shape
+
+    n_rows = n_subj * n_rois * n_pres * n_src
+
+    with open(txt_path, "w") as txt_file:
+
+        for i_subj in xrange(n_subj):
+
+            txt_file.write(str(i_subj + 1) + "\t")
+
+            for i_roi in xrange(n_rois):
+                for i_pres in xrange(n_pres):
+                    for i_src in xrange(n_src):
+
+                        dv = data[i_subj, i_roi, i_pres, i_src]
+
+                        txt_file.write(str(dv) + "\t")
+
+            txt_file.write("\n")
+
+
 def rdms():
 
     conf = ul_sens_fmri.config.get_conf()
@@ -92,6 +115,7 @@ def rdms():
 
         for i_roi in xrange(len(conf.ana.roi_names)):
 
+            # leaves (odd, even) x (above, below) x 60 x 60
             roi_data = subj_rdms[i_roi, ...]
 
             above_same = 1 - scipy.stats.spearmanr(
