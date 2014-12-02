@@ -59,6 +59,22 @@ def resp_amps(conf, subj_info=None):
         data - subj_mean[:, np.newaxis, np.newaxis, np.newaxis]
     ) + grand_mean
 
+    np.save(
+        file=os.path.join(
+            conf.base_group_dir,
+            "ul_sens_group_amp_data.npy"
+        ),
+        arr=data
+    )
+
+    save_resp_amps_for_spss(
+        data=data,
+        txt_path=os.path.join(
+            conf.base_group_dir,
+            "ul_sens_group_amp_data_spss.txt"
+        )
+    )
+
     return (data, norm_data)
 
 
