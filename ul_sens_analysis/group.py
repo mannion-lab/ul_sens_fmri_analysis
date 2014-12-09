@@ -101,7 +101,7 @@ def save_resp_amps_for_spss(data, txt_path):
             txt_file.write("\n")
 
 
-def rdms():
+def get_rdms():
 
     conf = ul_sens_fmri.config.get_conf()
     conf.ana = ul_sens_analysis.config.get_conf()
@@ -116,6 +116,18 @@ def rdms():
     )
     rdms.fill(np.NAN)
 
+    base_rdms = np.empty(
+        (
+            len(conf.ana.subj_info),
+            len(conf.ana.roi_names),
+            2,  # odd, even
+            2,  # above, below
+            60,  # images
+            60
+        )
+    )
+    base_rdms.fill(np.NAN)
+
     for (i_subj, (subj_id, acq_date)) in enumerate(conf.ana.subj_info):
 
         subj_dir = os.path.join(conf.ana.base_subj_dir, subj_id)
@@ -128,6 +140,8 @@ def rdms():
                 "{s:s}-rsa-rdm-.npy".format(s=subj_id + "_ul_sens_" + acq_date)
             )
         )
+
+        base_rdms[i_subj, ...] = subj_rdms
 
         for i_roi in xrange(len(conf.ana.roi_names)):
 
@@ -161,4 +175,137 @@ def rdms():
 
     assert np.sum(np.isnan(rdms)) == 0
 
-    return rdms
+    return (rdms, base_rdms)
+
+
+def descriptives():
+
+    conf = ul_sens_analysis.config.get_conf()
+
+    # subjects X va X pres (A,B) X src (U, L)
+    (_, amp_data) = ul_sens_analysis.group.resp_amps(conf)
+
+    # for the interaction, average over rois
+    x_data = np.mean(amp_data, axis=1)
+
+    x_mean = np.mean(x_data, axis=0)
+    x_se = np.std(x_data, axis=0, ddof=1) / np.sqrt(amp_data.shape[0])
+
+    pres_locs = ("Above", "Below")
+    src_locs = ("Upper", "Lower")
+
+    print "Descriptives:"
+
+    for (i_pres, pres_loc) in enumerate(pres_locs):
+
+        (t, p) = scipy.stats.ttest_rel(
+            x_data[:, i_pres, 0],
+            x_data[:, i_pres, 1]
+        )
+
+        print t, p
+
+        for (i_src, src_loc) in enumerate(src_locs):
+
+            out_str = (
+                "\t" + pres_loc + ", " + src_loc + "- " +
+                "Mean: {n:.4f}".format(n=x_mean[i_pres, i_src]) +
+                " SE: {n:.4f}".format(n=x_se[i_pres, i_src])
+            )
+
+            print out_str
+
+    # for the main effect of presentation, average over rois and srcs
+    pres_data = np.mean(np.mean(amp_data, axis=-1), axis=1)
+    pres_mean = np.mean(pres_data, axis=0)
+    pres_se = (
+        np.std(pres_data, axis=0, ddof=1) /
+        np.sqrt(amp_data.shape[0])
+    )
+
+    print "\n\tPres means: ", pres_mean
+    print "\tPres SEs: ", pres_se
+
+    print "\n"
+
+    # for the interaction between ROI and src, average over pres locs
+    rx_data = np.mean(amp_data, axis=-2)
+    rx_mean = np.mean(rx_data, axis=0)
+    rx_se = np.std(rx_data, axis=0, ddof=1) / np.sqrt(amp_data.shape[0])
+
+    for (i_roi, roi) in enumerate(conf.roi_names):
+
+        (t, p) = scipy.stats.ttest_rel(
+            rx_data[:, i_roi, 0],
+            rx_data[:, i_roi, 1]
+        )
+
+        print t, p
+
+        for (i_src, src_loc) in enumerate(src_locs):
+
+            out_str = (
+                "\t" + roi + ", " + src_loc + "- " +
+                "Mean: {n:.4f}".format(n=rx_mean[i_roi, i_src]) +
+                " SE: {n:.4f}".format(n=rx_se[i_roi, i_src])
+            )
+
+            print out_str
+
+def get_rdm_diff():
+
+    conf = ul_sens_analysis.config.get_conf()
+
+    rdms = get_rdms()[1]
+
+    # average over odd/even
+    rdms = np.mean(rdms, axis=2)
+
+    # for V1, look at (above - below)
+    rdm_diff = rdms[:, 0, 0, ...] - rdms[:, 0, 1, ...]
+
+#    data = np.empty((rdm_diff.shape[0], 3))
+#    data.fill(np.NAN)
+
+    diff_mask = np.tril(np.ones((60, 60)), k=-1)
+
+    data = []
+
+    for i_subj in xrange(rdm_diff.shape[0]):
+
+        subj_diff = rdm_diff[i_subj, ...]
+
+        # mask out the upper triangle
+
+        subj_data = [[] for _ in xrange(3)]
+
+        for i_img_1 in xrange(60):
+            for i_img_2 in xrange(60):
+
+                if diff_mask[i_img_1, i_img_2] == 0:
+                    continue
+
+                if i_img_1 < 30:
+                    if i_img_2 < 30:
+                        i_data = 0
+                    else:
+                        i_data = 2
+                else:
+                    if i_img_2 < 30:
+                        i_data = 2
+                    else:
+                        i_data = 1
+
+                subj_data[i_data].append(
+                    subj_diff[i_img_1, i_img_2]
+                )
+
+        subj_data = [np.mean(x_data) for x_data in subj_data]
+
+        data.append(subj_data)
+
+    return data
+
+
+
+

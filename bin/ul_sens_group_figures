@@ -31,7 +31,7 @@ def main():
     conf = ul_sens_analysis.config.get_conf()
 
     if args.proc_step == "resp_amp":
-        ul_sens_analysis.group.resp_amps(conf=conf)
+        ul_sens_analysis.figures.plot_resp_amp()
     elif args.proc_step == "resp_amp_roi":
         save_path = os.path.join(
             conf.base_fig_dir,

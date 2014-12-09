@@ -1,4 +1,6 @@
 
+import os
+
 import figutils
 import matplotlib
 figutils.set_defaults()
@@ -15,12 +17,50 @@ import fmri_tools.stats
 import ul_sens_analysis.config
 import ul_sens_analysis.group
 import ul_sens_fmri.config
+import ul_sens_fmri.stim
+
+
+def plot_resp_amp(save_path=None):
+
+    conf = ul_sens_analysis.config.get_conf()
+
+    # subjects X va X pres (A,B) X src (U, L)
+    (_, amp_data) = ul_sens_analysis.group.resp_amps(conf)
+
+    # average over rois
+    amp_data = np.mean(amp_data, axis=1)
+
+    subj_mean = np.mean(amp_data, axis=0)
+    subj_se = np.std(amp_data, axis=0, ddof=1) / np.sqrt(amp_data.shape[0])
+
+    pres_locs = ("Above", "Below")
+    src_locs = ("Upper", "Lower")
+
+    print "Descriptives:"
+
+    for (i_pres, pres_loc) in enumerate(pres_locs):
+        for (i_src, src_loc) in enumerate(src_locs):
+
+            out_str = (
+                "\t" + pres_loc + ", " + src_loc + "- " +
+                "Mean: {n:.4f}".format(n=subj_mean[i_pres, i_src]) +
+                " SE: {n:.4f}".format(n=subj_se[i_pres, i_src])
+            )
+
+            print out_str
+
+    pres_mean = np.mean(subj_mean, axis=-1)
+    pres_se = (
+        np.std(np.mean(amp_data, axis=-1), axis=0, ddof=1) /
+        np.sqrt(amp_data.shape[0])
+    )
+
+    print "\n\tPres means: ", pres_mean
+    print "\n\tPres SEs: ", pres_se
 
 
 
-
-
-def plot_amps(save_path=None):
+def plot_resp_amp_rois(save_path=None):
 
     conf = ul_sens_analysis.config.get_conf()
 
@@ -60,7 +100,7 @@ def plot_amps_visual_area(save_path, i_va):
     exp_conf = ul_sens_fmri.config.get_conf()
     conf = ul_sens_analysis.config.get_conf()
 
-    # subjects x va x pres (A,B) x src (L, U)
+    # subjects x va x pres (A,B) x src (U, L)
     (_, amp_data) = ul_sens_analysis.group.resp_amps(conf)
 
     amp_data = amp_data[:, i_va, ...]
@@ -156,3 +196,51 @@ def plot_amps_visual_area(save_path, i_va):
         plt.savefig(save_path)
 
     plt.close(fig)
+
+
+def get_img_fragments(save_path=None):
+
+    conf = ul_sens_fmri.config.get_conf()
+
+    frags = ul_sens_fmri.stim.get_img_fragments(conf)
+
+    data = np.empty(
+        (
+            conf.exp.n_img,
+            conf.exp.n_src_locs,  # above, below
+            2,  # left, right
+            128, 128, 3
+        )
+    )
+    data.fill(np.NAN)
+
+    for (i_img, img_id) in enumerate(conf.exp.img_ids):
+        for (i_vert, vert) in enumerate(("a", "b")):
+            for (i_horiz, horiz) in enumerate(("l", "r")):
+
+                img = frags[img_id][vert + horiz]
+                img = (img + 1) / 2.0
+
+                data[i_img, i_vert, i_horiz, ...] = img
+
+                if save_path is not None:
+
+                    fname = os.path.join(
+                        save_path,
+                        (
+                            "ul_sens_fmri_" +
+                            "img_" + str(img_id) +
+                            "_" + vert +
+                            "_" + horiz + ".png"
+                        )
+                    )
+
+                    plt.imsave(
+                        fname,
+                        (img * 255).astype("uint8")
+                    )
+
+
+    assert np.sum(np.isnan(data)) == 0
+
+    return data
