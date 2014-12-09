@@ -306,6 +306,16 @@ def run_rdm(subj_id, acq_date):
     )
     rdms.fill(np.NAN)
 
+    amp_data = np.empty(
+        (
+            len(conf.ana.roi_names),
+            2,
+            2,
+            n_cond
+        )
+    )
+    amp_data.fill(np.NAN)
+
     file_base = "{s:s}-rsa_{v:s}_{r:s}-{t:s}-{h:s}_nf{e:s}"
 
     # run separately for VF location and run split
@@ -359,12 +369,18 @@ def run_rdm(subj_id, acq_date):
                 roi_data = roi_data[:, i_arrange]
 
                 for i_a in xrange(n_cond):
+
+                    amp_data[i_roi, i_run_type, i_vf, i_a] = np.mean(
+                        roi_data[:, i_a]
+                    )
+
                     for i_b in xrange(n_cond):
 
                         rdm = 1 - scipy.stats.pearsonr(
                             roi_data[:, i_a],
                             roi_data[:, i_b]
                         )[0]
+
 
                         rdms[i_roi, i_run_type, i_vf, i_a, i_b] = rdm
 
@@ -377,3 +393,5 @@ def run_rdm(subj_id, acq_date):
     )
 
     np.save(rdm_filename, rdms)
+
+    return amp_data
