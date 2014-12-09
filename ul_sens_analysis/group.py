@@ -307,5 +307,21 @@ def get_rdm_diff():
     return data
 
 
+def get_ind_amps():
 
+    conf = ul_sens_fmri.config.get_conf()
+    conf.ana = ul_sens_analysis.config.get_conf()
+
+    data = np.empty((7, 3, 2, 60))
+    data.fill(np.NAN)
+
+    for (i_subj, (subj_id, acq_date)) in enumerate(conf.ana.subj_info):
+
+        subj_data = ul_sens_analysis.rsa.run_rdm(subj_id, acq_date)
+
+        subj_data = np.mean(subj_data, axis=1)
+
+        data[i_subj, ...] = subj_data
+
+    return data
 
