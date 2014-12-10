@@ -36,8 +36,6 @@ def run(subj_id, acq_date):
 
     os.chdir(glm_dir)
 
-#    cond_details = _prep_conds(subj_id, acq_date, conf)
-
     _run_glm(subj_id, acq_date, conf, log_dir)
 
 
@@ -118,10 +116,19 @@ def _run_glm(subj_id, acq_date, conf, log_dir):
         beta_bricks = "[40..$]"
 
         # check the beta bricks are as expected
-        #assert (
-        #    fmri_tools.utils.get_dset_label(beta_filename + beta_bricks) ==
-        #    [vf + "_upper#0", vf + "_lower#0"]
-        #)
+        dset_labels = fmri_tools.utils.get_dset_label(
+            beta_filename + beta_bricks
+        )
+
+        desired_labels = []
+
+        for src_loc in ["upper", "lower"]:
+            for img_id in conf.exp.img_ids:
+                desired_labels.append(
+                    vf + "_" + src_loc + "_" + str(img_id) + "#0"
+                )
+
+        assert dset_labels == desired_labels
 
         # run the PSC conversion
         fmri_tools.utils.beta_to_psc(
@@ -167,84 +174,6 @@ def _run_glm(subj_id, acq_date, conf, log_dir):
         runcmd.run_cmd(" ".join(cmd))
 
 
-def _prep_conds(subj_id, acq_date, conf):
-
-    inf_str = subj_id + "_ul_sens_" + acq_date
-
-    subj_dir = os.path.join(conf.ana.base_subj_dir, subj_id)
-
-    analysis_dir = os.path.join(subj_dir, "analysis")
-
-    details = {}
-
-    for (i_vf, vf) in enumerate(("above", "below")):
-
-        cond_details = []
-
-        # now we're also interested in the image source location
-        for (i_source, source) in enumerate(("upper", "lower")):
-
-            onsets_path = os.path.join(
-                analysis_dir,
-                "{s:s}-{v:s}_{sl:s}_onsets.txt".format(
-                    s=inf_str, v=vf, sl=source
-                )
-            )
-
-            cond_details.append(
-                {
-                    "name": vf + "_" + source,
-                    "onsets_path": onsets_path,
-                    "model": conf.ana.hrf_model
-                }
-            )
-
-            with open(onsets_path, "w") as onsets_file:
-
-                for run_num in xrange(1, conf.exp.n_runs + 1):
-
-                    run_onsets = []
-
-                    run_seq = np.load(
-                        os.path.join(
-                            subj_dir,
-                            "logs",
-                            "{s:s}_ul_sens_fmri_run_{n:02d}_seq.npy".format(
-                                s=subj_id, n=run_num
-                            )
-                        )
-                    )
-
-                    run_seq = run_seq[i_vf, ...]
-
-                    n_trials = run_seq.shape[0]
-
-                    for i_trial in xrange(n_trials):
-
-                        # this checks that the source location (index 1)
-                        # matches the current source location under
-                        # consideration. The latter is 0-based, so need to
-                        # increment by 1
-                        trial_ok = (run_seq[i_trial, 1] == (i_source + 1))
-
-                        if trial_ok:
-
-                            # since the trial is 'ok', then it should have a
-                            # valid image ID. Let's check
-                            assert run_seq[i_trial, 2] > 0.5
-
-                            # append the onset time
-                            run_onsets.append(run_seq[i_trial, 0])
-
-                    run_str = ["{n:.0f}".format(n=n) for n in run_onsets]
-
-                    onsets_file.write(" ".join(run_str) + "\n")
-
-        details[vf] = cond_details
-
-    return details
-
-
 def _write_onsets(subj_id, acq_date, conf, vf, runs_type, log_dir):
     """Write the onsets for a particular visual field location and runs type.
 
@@ -258,8 +187,8 @@ def _write_onsets(subj_id, acq_date, conf, vf, runs_type, log_dir):
         ul_sens_fmri config
     vf: string, {"above", "below"}
         Presentation location
-    runs_type: string, {"odd", "even"}
-        Whether to include the odd or even runs
+    runs_type: string, {"odd", "even", "all"}
+        Whether to include the odd, even, or all runs
     log_dir: string
         Location of the subject logfiles
 
@@ -374,5 +303,3 @@ def _write_onsets(subj_id, acq_date, conf, vf, runs_type, log_dir):
                     onset_file.write(" ".join(run_str) + "\n")
 
     return details
-
-
