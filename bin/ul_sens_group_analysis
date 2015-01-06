@@ -26,12 +26,8 @@ def main():
 
     args = parser.parse_args()
 
-    conf = ul_sens_analysis.config.get_conf()
-
     if args.proc_step == "resp_amp":
-        ul_sens_analysis.group.resp_amps(conf=conf)
-    elif args.proc_step == "rdms":
-        ul_sens_analysis.group.rdms()
+        ul_sens_analysis.group.resp_amps()
 
 
 if __name__ == "__main__":

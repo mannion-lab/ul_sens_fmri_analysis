@@ -12,15 +12,20 @@ import ul_sens_analysis.config
 import ul_sens_fmri.config
 
 
-def resp_amps(conf, subj_info=None):
+def resp_amps(conf=None, subj_info=None):
+
+    if conf is None:
+        conf = ul_sens_fmri.config.get_conf()
+        conf.ana = ul_sens_analysis.config.get_conf()
 
     if subj_info is None:
-        subj_info = conf.subj_info
+        subj_info = conf.ana.subj_info
 
     data = np.empty(
         (
-            len(subj_info),
-            len(conf.roi_names),
+            len(subj_info),  # subjects
+            len(conf.ana.roi_names),  # ROIs
+            conf.exp.n_img,  # images
             2,  # pres_loc: above, below
             2   # src_loc: upper, lower
         )
@@ -31,9 +36,11 @@ def resp_amps(conf, subj_info=None):
 
         for (i_vf, vf) in enumerate(["above", "below"]):
 
-            data[i_subj, :, i_vf, :] = np.loadtxt(
+            # this will be ROIs x (n_img x 2)
+            # the columns are (upper, lower, upper, lower, ...)
+            subj_data = np.loadtxt(
                 os.path.join(
-                    conf.base_subj_dir,
+                    conf.ana.base_subj_dir,
                     subj_id,
                     "analysis",
                     (
@@ -43,25 +50,17 @@ def resp_amps(conf, subj_info=None):
                 )
             )
 
+            # this is the upper source images; even indices
+            data[i_subj, :, :, i_vf, 0] = subj_data[:, 0::2]
+            # this is the lower source images; odd indices
+            data[i_subj, :, :, i_vf, 1] = subj_data[:, 1::2]
+
+    # check we've filled up 'data' correctly
     assert np.sum(np.isnan(data)) == 0
-
-    subj_mean = np.mean(
-        np.mean(
-            np.mean(data, axis=-1),
-            axis=-1
-        ),
-        axis=-1
-    )
-
-    grand_mean = np.mean(data)
-
-    norm_data = (
-        data - subj_mean[:, np.newaxis, np.newaxis, np.newaxis]
-    ) + grand_mean
 
     np.save(
         file=os.path.join(
-            conf.base_group_dir,
+            conf.ana.base_group_dir,
             "ul_sens_group_amp_data.npy"
         ),
         arr=data
@@ -70,15 +69,16 @@ def resp_amps(conf, subj_info=None):
     save_resp_amps_for_spss(
         data=data,
         txt_path=os.path.join(
-            conf.base_group_dir,
+            conf.ana.base_group_dir,
             "ul_sens_group_amp_data_spss.txt"
         )
     )
 
-    return (data, norm_data)
-
 
 def save_resp_amps_for_spss(data, txt_path):
+
+    # average over images
+    data = np.mean(data, axis=2)
 
     (n_subj, n_rois, n_pres, n_src) = data.shape
 
@@ -99,83 +99,6 @@ def save_resp_amps_for_spss(data, txt_path):
                         txt_file.write(str(dv) + "\t")
 
             txt_file.write("\n")
-
-
-def get_rdms():
-
-    conf = ul_sens_fmri.config.get_conf()
-    conf.ana = ul_sens_analysis.config.get_conf()
-
-    rdms = np.empty(
-        (
-            len(conf.ana.subj_info),
-            len(conf.ana.roi_names),
-            2,  # (above, below)
-            2   # (same, different)
-        )
-    )
-    rdms.fill(np.NAN)
-
-    base_rdms = np.empty(
-        (
-            len(conf.ana.subj_info),
-            len(conf.ana.roi_names),
-            2,  # odd, even
-            2,  # above, below
-            60,  # images
-            60
-        )
-    )
-    base_rdms.fill(np.NAN)
-
-    for (i_subj, (subj_id, acq_date)) in enumerate(conf.ana.subj_info):
-
-        subj_dir = os.path.join(conf.ana.base_subj_dir, subj_id)
-
-        # roi x run type x vf x img x img
-        subj_rdms = np.load(
-            os.path.join(
-                subj_dir,
-                "rsa",
-                "{s:s}-rsa-rdm-.npy".format(s=subj_id + "_ul_sens_" + acq_date)
-            )
-        )
-
-        base_rdms[i_subj, ...] = subj_rdms
-
-        for i_roi in xrange(len(conf.ana.roi_names)):
-
-            # leaves (odd, even) x (above, below) x 60 x 60
-            roi_data = subj_rdms[i_roi, ...]
-
-            above_same = 1 - scipy.stats.spearmanr(
-                roi_data[0, 0, ...].flat,  # odd, above
-                roi_data[1, 0, ...].flat   # even, above
-            )[0]
-
-            below_same = 1 - scipy.stats.spearmanr(
-                roi_data[0, 1, ...].flat,  # odd, below
-                roi_data[1, 1, ...].flat   # even, below
-            )[0]
-
-            above_diff = 1 - scipy.stats.spearmanr(
-                roi_data[0, 0, ...].flat,  # odd, above
-                roi_data[1, 1, ...].flat   # even, below
-            )[0]
-
-            below_diff = 1 - scipy.stats.spearmanr(
-                roi_data[0, 1, ...].flat,  # odd, below
-                roi_data[1, 0, ...].flat   # even, above
-            )[0]
-
-            rdms[i_subj, i_roi, 0, 0] = above_same
-            rdms[i_subj, i_roi, 0, 1] = above_diff
-            rdms[i_subj, i_roi, 1, 0] = below_same
-            rdms[i_subj, i_roi, 1, 1] = below_diff
-
-    assert np.sum(np.isnan(rdms)) == 0
-
-    return (rdms, base_rdms)
 
 
 def descriptives():
@@ -251,77 +174,3 @@ def descriptives():
             )
 
             print out_str
-
-def get_rdm_diff():
-
-    conf = ul_sens_analysis.config.get_conf()
-
-    rdms = get_rdms()[1]
-
-    # average over odd/even
-    rdms = np.mean(rdms, axis=2)
-
-    # for V1, look at (above - below)
-    rdm_diff = rdms[:, 0, 0, ...] - rdms[:, 0, 1, ...]
-
-#    data = np.empty((rdm_diff.shape[0], 3))
-#    data.fill(np.NAN)
-
-    diff_mask = np.tril(np.ones((60, 60)), k=-1)
-
-    data = []
-
-    for i_subj in xrange(rdm_diff.shape[0]):
-
-        subj_diff = rdm_diff[i_subj, ...]
-
-        # mask out the upper triangle
-
-        subj_data = [[] for _ in xrange(3)]
-
-        for i_img_1 in xrange(60):
-            for i_img_2 in xrange(60):
-
-                if diff_mask[i_img_1, i_img_2] == 0:
-                    continue
-
-                if i_img_1 < 30:
-                    if i_img_2 < 30:
-                        i_data = 0
-                    else:
-                        i_data = 2
-                else:
-                    if i_img_2 < 30:
-                        i_data = 2
-                    else:
-                        i_data = 1
-
-                subj_data[i_data].append(
-                    subj_diff[i_img_1, i_img_2]
-                )
-
-        subj_data = [np.mean(x_data) for x_data in subj_data]
-
-        data.append(subj_data)
-
-    return data
-
-
-def get_ind_amps():
-
-    conf = ul_sens_fmri.config.get_conf()
-    conf.ana = ul_sens_analysis.config.get_conf()
-
-    data = np.empty((7, 3, 2, 60))
-    data.fill(np.NAN)
-
-    for (i_subj, (subj_id, acq_date)) in enumerate(conf.ana.subj_info):
-
-        subj_data = ul_sens_analysis.rsa.run_rdm(subj_id, acq_date)
-
-        subj_data = np.mean(subj_data, axis=1)
-
-        data[i_subj, ...] = subj_data
-
-    return data
-
