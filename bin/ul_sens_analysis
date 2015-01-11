@@ -8,7 +8,6 @@ import collections
 import ul_sens_analysis.loc_glm
 import ul_sens_analysis.glm_prep
 import ul_sens_analysis.glm
-import ul_sens_analysis.rsa
 
 
 def main():
@@ -19,8 +18,6 @@ def main():
     proc_options["loc_glm"] = ul_sens_analysis.loc_glm.run
     proc_options["glm_prep"] = ul_sens_analysis.glm_prep.run
     proc_options["glm"] = ul_sens_analysis.glm.run
-    proc_options["rsa_glm"] = ul_sens_analysis.rsa.run_glm
-    proc_options["rsa_rdms"] = ul_sens_analysis.rsa.run_rdm
 
     parser = argparse.ArgumentParser()
 

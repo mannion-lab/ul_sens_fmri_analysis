@@ -37,7 +37,7 @@ raw_paths = None
 
 # include a list of any extra directories to create, specified relative to the
 # subject's directory within the study directory
-extra_dirs_to_make = ["logs", "rois", "vf_analysis"]
+extra_dirs_to_make = ["loc_analysis"]
 
 
 ## CONVERT
