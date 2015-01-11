@@ -97,11 +97,18 @@ def plot_resp_amp_rois(save_path=None):
 
 def plot_amps_visual_area(save_path, i_va):
 
-    exp_conf = ul_sens_fmri.config.get_conf()
-    conf = ul_sens_analysis.config.get_conf()
+    conf = ul_sens_fmri.config.get_conf()
+    conf.ana = ul_sens_analysis.config.get_conf()
 
     # subjects x va x pres (A,B) x src (U, L)
-    (_, amp_data) = ul_sens_analysis.group.resp_amps(conf)
+    amp_data = np.load(
+        os.path.join(
+            conf.ana.base_group_dir,
+            "ul_sens_group_amp_data.npy"
+        )
+    )
+
+    amp_data = np.mean(amp_data, axis=2)
 
     amp_data = amp_data[:, i_va, ...]
 
@@ -112,7 +119,7 @@ def plot_amps_visual_area(save_path, i_va):
         factor_names=["pres", "src"]
     )
 
-    print "Stats for " + str(conf.roi_names[i_va]) + ":"
+    print "Stats for " + str(conf.ana.roi_names[i_va]) + ":"
     print stats
 
     # average and SE over subjects
@@ -133,8 +140,8 @@ def plot_amps_visual_area(save_path, i_va):
     )
 
     symbols = ["o", "s"]
-    labels = ["Upper", "Lower"]
-    colours = conf.source_colours
+    labels = ["Above", "Below"]
+    colours = conf.ana.source_colours
     marker_size = 20
 
     for i_src in xrange(2):
@@ -174,14 +181,14 @@ def plot_amps_visual_area(save_path, i_va):
 
     ax_base.set_xlim([-0.5, 1.5])
     ax_base.set_xticks(range(2))
-    ax_base.set_xticklabels(["Above", "Below"])
+    ax_base.set_xticklabels(["Upper", "Lower"])
 
     ax_plt.set_ylabel("Response (psc)", y=0.45)
 
     ax_plt.text(
         x=0.05,
         y=0.9,
-        s=conf.roi_names[i_va],
+        s=conf.ana.roi_names[i_va],
         transform=ax_plt.transAxes
     )
 

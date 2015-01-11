@@ -32,7 +32,6 @@ def get_conf():
     conf.base_fig_dir = os.path.join(conf.base_dir, "figures")
 
     conf.loc_glm_dir = "loc_analysis"
-    conf.rsa_dir = "rsa"
 
     conf.n_to_censor = int(
         exp_conf.exp.n_pre_trials *

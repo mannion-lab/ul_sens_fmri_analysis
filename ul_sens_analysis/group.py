@@ -75,6 +75,71 @@ def resp_amps(conf=None, subj_info=None):
     )
 
 
+def difference_term():
+
+    conf = ul_sens_fmri.config.get_conf()
+    conf.ana = ul_sens_analysis.config.get_conf()
+
+    # this is subjects, rois, images, pres_loc, src_loc
+    data = np.load(
+        os.path.join(
+            conf.ana.base_group_dir,
+            "ul_sens_group_amp_data.npy"
+        )
+    )
+
+    # this will hold the difference term
+    diff = np.empty(data.shape[:4])
+    diff.fill(np.NAN)
+
+    for i_subj in xrange(data.shape[0]):
+        for i_roi in xrange(data.shape[1]):
+            for i_img in xrange(data.shape[2]):
+                for i_src_loc in xrange(data.shape[-1]):
+
+                    resp = data[i_subj, i_roi, i_img, :, i_src_loc]
+
+                    # above - below
+                    curr_diff = resp[0] - resp[1]
+
+                    diff[i_subj, i_roi, i_img, i_src_loc] = curr_diff
+
+    assert np.sum(np.isnan(diff)) == 0
+
+    diff = np.mean(diff, axis=0)
+
+    # roi, fragment, (id, src_loc, diff_term)
+    rdiff = np.empty((data.shape[1], data.shape[2] * data.shape[4], 3))
+    rdiff.fill(np.NAN)
+
+    for i_roi in xrange(rdiff.shape[0]):
+
+        i = 0
+
+        for i_img in xrange(diff.shape[1]):
+            for i_src_loc in xrange(diff.shape[2]):
+
+                rdiff[i_roi, i, 0] = i_img
+                rdiff[i_roi, i, 1] = i_src_loc
+                rdiff[i_roi, i, 2] = diff[i_roi, i_img, i_src_loc]
+
+                i += 1
+
+    for i_roi in xrange(rdiff.shape[0]):
+
+        i_sort = np.argsort(rdiff[i_roi, :, -1])
+
+        rdiff[i_roi, ...] = rdiff[i_roi, i_sort, ...]
+
+    np.save(
+        file=os.path.join(
+            conf.ana.base_group_dir,
+            "ul_sens_group_amp_diffs_sorted.npy"
+        ),
+        arr=rdiff
+    )
+
+
 def save_resp_amps_for_spss(data, txt_path):
 
     # average over images
