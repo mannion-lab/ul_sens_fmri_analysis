@@ -348,24 +348,57 @@ def plot_top_resp_diff(save_path=None):
 
     n_to_show = 5
 
-    i_tops = range(n_to_show)
-    i_bottoms = range(-n_to_show, 0)[::-1]
+    # they're ranked in ascending order
+    i_bottoms = range(n_to_show)
+    i_tops = range(-n_to_show, 0)[::-1]
 
-    main_fig = sg.SVGFigure("13.7cm", "13.56cm")
+    main_fig = sg.SVGFigure("13.7cm", "17.2cm")
 
     tmp_files = []
     figs = []
+    texts = []
 
     z = 0
+    column = 0
 
     for (i_rank, rank_type) in zip((i_tops, i_bottoms), ("top", "bottom")):
+
+        row = 0
 
         for i in i_rank:
 
             i_img = int(diff_data[i, 0])
             i_src = int(diff_data[i, 2])
 
+            diff = diff_data[i, -1]
+
+            diff_str = "Upper - lower = {n:.2f}".format(n=diff)
+
+            if i_src == 0:
+                src = "above"
+            else:
+                src = "below"
+            diff_str += "; source = " + src
+
+            if rank_type == "top":
+                col_offset = 0
+            else:
+                col_offset = 140 * 2
+
+            text = sg.TextElement(
+                col_offset + 0,
+                row * 125 + 10,
+                diff_str,
+                size=12,
+                font="FreeSans"
+            )
+
+            texts.append(text)
+
             for (i_side, side) in enumerate(("left", "right")):
+
+                if side == "right":
+                    col_offset += 110
 
                 img_file = tempfile.NamedTemporaryFile(
                     prefix=rank_type + "_" + str(i),
@@ -408,13 +441,19 @@ def plot_top_resp_diff(save_path=None):
                 fig = sg.fromfile(img_file.name + ".svg")
 
                 fig_plot = fig.getroot()
-                fig_plot.moveto(0, z * 128, scale=1.)
+
+                fig_plot.moveto(col_offset, row * 125 + 18, scale=0.7)
 
                 figs.append(fig_plot)
 
                 z += 1
 
+            row += 1
+
+        column += 1
+
     main_fig.append(figs)
+    _ = [main_fig.append(text) for text in texts]
 
     main_fig.save("/home/damien/tst.svg")
 
