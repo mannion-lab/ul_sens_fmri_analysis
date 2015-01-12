@@ -1,5 +1,6 @@
 
 import os
+import tempfile
 
 import figutils
 import matplotlib
@@ -13,6 +14,7 @@ import scipy.stats
 import svgutils.transform as sg
 
 import fmri_tools.stats
+import runcmd
 
 import ul_sens_analysis.config
 import ul_sens_analysis.group
@@ -22,53 +24,55 @@ import ul_sens_fmri.stim
 
 def plot_resp_amp(save_path=None):
 
-    conf = ul_sens_analysis.config.get_conf()
+    conf = ul_sens_fmri.config.get_conf()
+    conf.ana = ul_sens_analysis.config.get_conf()
 
-    # subjects X va X pres (A,B) X src (U, L)
-    (_, amp_data) = ul_sens_analysis.group.resp_amps(conf)
-
-    # average over rois
-    amp_data = np.mean(amp_data, axis=1)
-
-    subj_mean = np.mean(amp_data, axis=0)
-    subj_se = np.std(amp_data, axis=0, ddof=1) / np.sqrt(amp_data.shape[0])
-
-    pres_locs = ("Above", "Below")
-    src_locs = ("Upper", "Lower")
-
-    print "Descriptives:"
-
-    for (i_pres, pres_loc) in enumerate(pres_locs):
-        for (i_src, src_loc) in enumerate(src_locs):
-
-            out_str = (
-                "\t" + pres_loc + ", " + src_loc + "- " +
-                "Mean: {n:.4f}".format(n=subj_mean[i_pres, i_src]) +
-                " SE: {n:.4f}".format(n=subj_se[i_pres, i_src])
-            )
-
-            print out_str
-
-    pres_mean = np.mean(subj_mean, axis=-1)
-    pres_se = (
-        np.std(np.mean(amp_data, axis=-1), axis=0, ddof=1) /
-        np.sqrt(amp_data.shape[0])
+    # subjects x va x img x pres (A,B) x src (U, L)
+    amp_data = np.load(
+        os.path.join(
+            conf.ana.base_group_dir,
+            "ul_sens_group_amp_data.npy"
+        )
     )
 
-    print "\n\tPres means: ", pres_mean
-    print "\n\tPres SEs: ", pres_se
+    # average over images
+    amp_data = np.mean(amp_data, axis=2)
+    # and ROIs
+    amp_data = np.mean(amp_data, axis=1)
 
+    plot_amps_visual_area(
+        save_path + ".svg",
+        amp_data
+    )
+
+    figutils.svg_to_pdf(
+        svg_path=save_path + ".svg",
+        pdf_path=save_path + ".pdf"
+    )
 
 
 def plot_resp_amp_rois(save_path=None):
 
-    conf = ul_sens_analysis.config.get_conf()
+    conf = ul_sens_fmri.config.get_conf()
+    conf.ana = ul_sens_analysis.config.get_conf()
 
-    for i_va in xrange(len(conf.roi_names)):
+    # subjects x va x img x pres (A,B) x src (U, L)
+    amp_data = np.load(
+        os.path.join(
+            conf.ana.base_group_dir,
+            "ul_sens_group_amp_data.npy"
+        )
+    )
+
+    # average over images
+    amp_data = np.mean(amp_data, axis=2)
+
+    for i_va in xrange(len(conf.ana.roi_names)):
 
         plot_amps_visual_area(
             save_path + "_" + str(i_va) + ".svg",
-            i_va
+            amp_data[:, i_va, ...],
+            conf.ana.roi_names[i_va]
         )
 
     fig = sg.SVGFigure("13.7cm", "3.56cm")
@@ -95,32 +99,10 @@ def plot_resp_amp_rois(save_path=None):
     )
 
 
-def plot_amps_visual_area(save_path, i_va):
+def plot_amps_visual_area(save_path, amp_data, roi_name=""):
 
     conf = ul_sens_fmri.config.get_conf()
     conf.ana = ul_sens_analysis.config.get_conf()
-
-    # subjects x va x pres (A,B) x src (U, L)
-    amp_data = np.load(
-        os.path.join(
-            conf.ana.base_group_dir,
-            "ul_sens_group_amp_data.npy"
-        )
-    )
-
-    amp_data = np.mean(amp_data, axis=2)
-
-    amp_data = amp_data[:, i_va, ...]
-
-    # might as well do stats
-    stats = fmri_tools.stats.anova(
-        data=amp_data,
-        output_path="/tmp",
-        factor_names=["pres", "src"]
-    )
-
-    print "Stats for " + str(conf.ana.roi_names[i_va]) + ":"
-    print stats
 
     # average and SE over subjects
     amp_mean = np.mean(amp_data, axis=0)
@@ -188,7 +170,7 @@ def plot_amps_visual_area(save_path, i_va):
     ax_plt.text(
         x=0.05,
         y=0.9,
-        s=conf.ana.roi_names[i_va],
+        s=roi_name,
         transform=ax_plt.transAxes
     )
 
@@ -251,3 +233,87 @@ def get_img_fragments(save_path=None):
     assert np.sum(np.isnan(data)) == 0
 
     return data
+
+
+def write_stim_library(save_path):
+
+    conf = ul_sens_fmri.config.get_conf()
+    conf.ana = ul_sens_analysis.config.get_conf()
+
+    sshot_dir = "/sci/study/ul_sens/sshots"
+    sshot_files = os.listdir(sshot_dir)
+
+    cwd = os.getcwd()
+    os.chdir(sshot_dir)
+
+    pdf_list = []
+
+    for img_id in conf.exp.img_ids:
+        for (i_src_loc, src_loc) in enumerate(("above", "below")):
+            for (pres_loc, floc) in zip(("upper", "lower"), ("a", "b")):
+
+                out_file = tempfile.NamedTemporaryFile(
+                    suffix=".pdf",
+                    delete=False
+                )
+                out_file.close()
+
+                pdf_list.append(out_file.name)
+
+                for sshot_file in sshot_files:
+
+                    if str(img_id) not in sshot_file:
+                        continue
+
+                    src_str = "src_loc_{n:.1f}".format(n=i_src_loc + 1)
+                    if src_str not in sshot_file:
+                        continue
+
+                    if "id_{n:.1f}".format(n=img_id) not in sshot_file:
+                        continue
+
+                    pres_str = "pres_loc_" + floc
+                    if pres_str not in sshot_file:
+                        continue
+
+                    if "crop" not in sshot_file:
+                        continue
+
+                    header = (
+                        "Image ID: " + str(img_id) +
+                        "; Source location: " + src_loc +
+                        "; Presentation location: " + pres_loc
+                    )
+
+                    (root, ext) = os.path.splitext(sshot_file)
+
+                    # made it this far, must be OK
+                    cmd = [
+                        "convert",
+                        "-append", "'label:" + header + "'",
+                        sshot_file,
+                        "-compress", "jpeg",
+                        out_file.name
+                    ]
+
+                    runcmd.run_cmd(" ".join(cmd))
+
+                    break
+
+    assert len(pdf_list) == 120
+
+    os.chdir(cwd)
+
+    cmd = [
+        "stapler",
+        "cat"
+    ]
+
+    cmd.extend(pdf_list)
+
+    cmd.append(save_path)
+
+    runcmd.run_cmd(" ".join(cmd))
+
+    for pdf_file in pdf_list:
+        os.remove(pdf_file)

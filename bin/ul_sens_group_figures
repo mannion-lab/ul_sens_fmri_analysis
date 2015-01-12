@@ -13,9 +13,8 @@ def main():
     "Parse the command-line input and offload"
 
     proc_options = [
-        "resp_amp",
-        "resp_amp_roi",
-        "rdms"
+        "resp_amp_rois",
+        "resp_amp"
     ]
 
     parser = argparse.ArgumentParser()
@@ -30,16 +29,19 @@ def main():
 
     conf = ul_sens_analysis.config.get_conf()
 
-    if args.proc_step == "resp_amp":
-        ul_sens_analysis.figures.plot_resp_amp()
-    elif args.proc_step == "resp_amp_roi":
+    if args.proc_step == "resp_amp_rois":
         save_path = os.path.join(
             conf.base_fig_dir,
             "ul_sens_resp_amp_roi"
         )
-        ul_sens_analysis.figures.plot_amps(save_path=save_path)
-    elif args.proc_step == "rdms":
-        ul_sens_analysis.group.rdms()
+        ul_sens_analysis.figures.plot_resp_amp_rois(save_path=save_path)
+
+    elif args.proc_step == "resp_amp":
+        save_path = os.path.join(
+            conf.base_fig_dir,
+            "ul_sens_resp_amp"
+        )
+        ul_sens_analysis.figures.plot_resp_amp(save_path=save_path)
 
 
 if __name__ == "__main__":
