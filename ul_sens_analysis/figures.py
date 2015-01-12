@@ -13,6 +13,8 @@ import numpy as np
 import scipy.stats
 import svgutils.transform as sg
 
+import psychopy.filters
+
 import fmri_tools.stats
 import runcmd
 
@@ -193,6 +195,13 @@ def get_img_fragments(save_path=None):
 
     frags = ul_sens_fmri.stim.get_img_fragments(conf)
 
+    mask = psychopy.filters.makeMask(
+        matrixSize=conf.stim.img_aperture_size_pix,
+        shape="raisedCosine",
+        range=[0, 1]
+    )
+    mask = mask[..., np.newaxis]
+
     data = np.empty(
         (
             conf.exp.n_img,
@@ -209,6 +218,8 @@ def get_img_fragments(save_path=None):
 
                 img = frags[img_id][vert + horiz]
                 img = (img + 1) / 2.0
+
+                img = (0.5 * (1 - mask) ) + (img * mask)
 
                 data[i_img, i_vert, i_horiz, ...] = img
 
@@ -317,3 +328,97 @@ def write_stim_library(save_path):
 
     for pdf_file in pdf_list:
         os.remove(pdf_file)
+
+
+def plot_top_resp_diff(save_path=None):
+
+    conf = ul_sens_fmri.config.get_conf()
+    conf.ana = ul_sens_analysis.config.get_conf()
+
+    # (img * src, 4)
+    diff_data = np.load(
+        os.path.join(
+            conf.ana.base_group_dir,
+            "ul_sens_group_amp_diffs_sorted.npy"
+        )
+    )
+
+    # img x src x LR x rows x cols x colours
+    img_frags = get_img_fragments()
+
+    n_to_show = 5
+
+    i_tops = range(n_to_show)
+    i_bottoms = range(-n_to_show, 0)[::-1]
+
+    main_fig = sg.SVGFigure("13.7cm", "13.56cm")
+
+    tmp_files = []
+    figs = []
+
+    z = 0
+
+    for (i_rank, rank_type) in zip((i_tops, i_bottoms), ("top", "bottom")):
+
+        for i in i_rank:
+
+            i_img = int(diff_data[i, 0])
+            i_src = int(diff_data[i, 2])
+
+            for (i_side, side) in enumerate(("left", "right")):
+
+                img_file = tempfile.NamedTemporaryFile(
+                    prefix=rank_type + "_" + str(i),
+                    delete=False
+                )
+                img_file.close()
+
+                tmp_files.append(img_file.name)
+
+                img = img_frags[i_img, i_src, i_side, ...]
+
+                plt.imsave(
+                    fname=img_file.name + ".png",
+                    arr=img,
+                    vmin=0.0,
+                    vmax=1.0
+                )
+
+                cmd = [
+                    "convert",
+                    img_file.name + ".png",
+                    img_file.name + ".svg"
+                ]
+
+                runcmd.run_cmd(" ".join(cmd))
+
+                with open(img_file.name + ".svg", "r") as svg_file:
+                    svg_data = svg_file.readlines()
+
+                svg_data.insert(
+                    3,
+                    '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="128" height="128">'
+                )
+
+                del svg_data[4]
+
+                with open(img_file.name + ".svg", "w") as svg_file:
+                    svg_file.writelines(svg_data)
+
+                fig = sg.fromfile(img_file.name + ".svg")
+
+                fig_plot = fig.getroot()
+                fig_plot.moveto(0, z * 128, scale=1.)
+
+                figs.append(fig_plot)
+
+                z += 1
+
+    main_fig.append(figs)
+
+    main_fig.save("/home/damien/tst.svg")
+
+    for tmp_file in tmp_files:
+        os.remove(tmp_file)
+        os.remove(tmp_file + ".png")
+        os.remove(tmp_file + ".svg")
