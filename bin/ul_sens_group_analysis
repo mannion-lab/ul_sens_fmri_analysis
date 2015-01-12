@@ -13,7 +13,6 @@ def main():
 
     proc_options = [
         "resp_amp",
-        "rdms"
     ]
 
     parser = argparse.ArgumentParser()

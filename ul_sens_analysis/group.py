@@ -26,18 +26,18 @@ def resp_amps(conf=None, subj_info=None):
             len(subj_info),  # subjects
             len(conf.ana.roi_names),  # ROIs
             conf.exp.n_img,  # images
-            2,  # pres_loc: above, below
-            2   # src_loc: upper, lower
+            2,  # pres_loc: upper, lower
+            2   # src_loc: above, below
         )
     )
     data.fill(np.NAN)
 
     for (i_subj, (subj_id, acq_date)) in enumerate(subj_info):
 
-        for (i_vf, vf) in enumerate(["above", "below"]):
+        for (i_vf, vf) in enumerate(["upper", "lower"]):
 
             # this will be ROIs x (n_img x 2)
-            # the columns are (upper, lower, upper, lower, ...)
+            # the columns are (above, below, above, below, ...)
             subj_data = np.loadtxt(
                 os.path.join(
                     conf.ana.base_subj_dir,
@@ -50,9 +50,9 @@ def resp_amps(conf=None, subj_info=None):
                 )
             )
 
-            # this is the upper source images; even indices
+            # this is the above source images; even indices
             data[i_subj, :, :, i_vf, 0] = subj_data[:, 0::2]
-            # this is the lower source images; odd indices
+            # this is the below source images; odd indices
             data[i_subj, :, :, i_vf, 1] = subj_data[:, 1::2]
 
     # check we've filled up 'data' correctly
@@ -73,6 +73,46 @@ def resp_amps(conf=None, subj_info=None):
             "ul_sens_group_amp_data_spss.txt"
         )
     )
+
+
+def save_resp_amps_for_spss(data, txt_path):
+
+    # average over images
+    data = np.mean(data, axis=2)
+
+    (n_subj, n_rois, n_pres, n_src) = data.shape
+
+    n_rows = n_subj * n_rois * n_pres * n_src
+
+    header = []
+
+    for i_roi in xrange(n_rois):
+        for i_pres in xrange(n_pres):
+            for i_src in xrange(n_src):
+
+                header.append(
+                    "r{r:d}_p{p:d}_s{s:d}".format(
+                        r=i_roi + 1,
+                        p=i_pres + 1,
+                        s=i_src + 1
+                    )
+                )
+
+    with open(txt_path, "w") as txt_file:
+
+        txt_file.write("\t".join(header) + "\n")
+
+        for i_subj in xrange(n_subj):
+
+            for i_roi in xrange(n_rois):
+                for i_pres in xrange(n_pres):
+                    for i_src in xrange(n_src):
+
+                        dv = data[i_subj, i_roi, i_pres, i_src]
+
+                        txt_file.write("{dv:.18e}\t".format(dv=dv))
+
+            txt_file.write("\n")
 
 
 def difference_term():
@@ -138,32 +178,6 @@ def difference_term():
         ),
         arr=rdiff
     )
-
-
-def save_resp_amps_for_spss(data, txt_path):
-
-    # average over images
-    data = np.mean(data, axis=2)
-
-    (n_subj, n_rois, n_pres, n_src) = data.shape
-
-    n_rows = n_subj * n_rois * n_pres * n_src
-
-    with open(txt_path, "w") as txt_file:
-
-        for i_subj in xrange(n_subj):
-
-            txt_file.write(str(i_subj + 1) + "\t")
-
-            for i_roi in xrange(n_rois):
-                for i_pres in xrange(n_pres):
-                    for i_src in xrange(n_src):
-
-                        dv = data[i_subj, i_roi, i_pres, i_src]
-
-                        txt_file.write(str(dv) + "\t")
-
-            txt_file.write("\n")
 
 
 def descriptives():

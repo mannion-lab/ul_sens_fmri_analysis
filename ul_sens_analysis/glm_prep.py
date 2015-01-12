@@ -57,7 +57,7 @@ def _loc_to_mask(subj_id, acq_date, conf):
     mask_paths = {}
 
     # go through combinations of visual field position and hemisphere
-    for (vf, hemi) in itertools.product(("above", "below"), ("lh", "rh")):
+    for (vf, hemi) in itertools.product(("upper", "lower"), ("lh", "rh")):
 
         # this is the localiser GLM subbrick with the t-statistic for this
         # visual field location
@@ -134,7 +134,7 @@ def _extract_data(subj_id, acq_date, conf, mask_paths):
     )
     data.fill(np.NAN)
 
-    for (i_vf, vf) in enumerate(("above", "below")):
+    for (i_vf, vf) in enumerate(("upper", "lower")):
 
         for run_num in range(1, conf.exp.n_runs + 1):
 

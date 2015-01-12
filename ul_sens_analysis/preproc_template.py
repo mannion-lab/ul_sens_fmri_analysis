@@ -52,7 +52,7 @@ extra_dirs_to_make = ["loc_analysis"]
 # image files
 apply_slice_timing_to_run = [True] * n_runs
 # if slice timing, need to provide a list of the acqisition times of each slice
-slice_timing = conf.ana.slice_timing_path
+slice_timing = "@" + conf.ana.slice_timing_path
 
 # set with your TR
 tr = conf.ana.tr_s
@@ -80,7 +80,7 @@ run_fslorient = False
 # ideally half way through the session, but may prefer something else
 moco_base_run = np.ceil(n_runs / 2.0).astype("int")
 # volume number to correct to within-run. Should change to be roughly half the total
-moco_base_vol = 1
+moco_base_vol = 83
 
 
 ## UNWARP
