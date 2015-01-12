@@ -128,48 +128,49 @@ def difference_term():
         )
     )
 
+    # average over ROIs
+    data = np.mean(data, axis=1)
+
+    (n_subj, n_img, n_pres, n_src) = data.shape
+
     # this will hold the difference term
-    diff = np.empty(data.shape[:4])
+    diff = np.empty((n_subj, n_img, n_src))
     diff.fill(np.NAN)
 
-    for i_subj in xrange(data.shape[0]):
-        for i_roi in xrange(data.shape[1]):
-            for i_img in xrange(data.shape[2]):
-                for i_src_loc in xrange(data.shape[-1]):
+    for i_subj in xrange(n_subj):
+        for i_img in xrange(n_img):
+            for i_src_loc in xrange(n_src):
 
-                    resp = data[i_subj, i_roi, i_img, :, i_src_loc]
+                resp = data[i_subj, i_img, :, i_src_loc]
 
-                    # above - below
-                    curr_diff = resp[0] - resp[1]
+                # above - below
+                curr_diff = resp[0] - resp[1]
 
-                    diff[i_subj, i_roi, i_img, i_src_loc] = curr_diff
+                diff[i_subj, i_img, i_src_loc] = curr_diff
 
     assert np.sum(np.isnan(diff)) == 0
 
     diff = np.mean(diff, axis=0)
 
-    # roi, fragment, (id, src_loc, diff_term)
-    rdiff = np.empty((data.shape[1], data.shape[2] * data.shape[4], 3))
+    # roi, fragment, (id, i_id, src_loc, diff_term)
+    rdiff = np.empty((n_img * n_src, 4))
     rdiff.fill(np.NAN)
 
-    for i_roi in xrange(rdiff.shape[0]):
+    i = 0
 
-        i = 0
+    for i_img in xrange(n_img):
+        for i_src_loc in xrange(n_src):
 
-        for i_img in xrange(diff.shape[1]):
-            for i_src_loc in xrange(diff.shape[2]):
+            rdiff[i, 0] = i_img
+            rdiff[i, 1] = conf.exp.img_ids[i_img]
+            rdiff[i, 2] = i_src_loc
+            rdiff[i, 3] = diff[i_img, i_src_loc]
 
-                rdiff[i_roi, i, 0] = i_img
-                rdiff[i_roi, i, 1] = i_src_loc
-                rdiff[i_roi, i, 2] = diff[i_roi, i_img, i_src_loc]
+            i += 1
 
-                i += 1
+    i_sort = np.argsort(rdiff[:, -1])
 
-    for i_roi in xrange(rdiff.shape[0]):
-
-        i_sort = np.argsort(rdiff[i_roi, :, -1])
-
-        rdiff[i_roi, ...] = rdiff[i_roi, i_sort, ...]
+    rdiff = rdiff[i_sort, ...]
 
     np.save(
         file=os.path.join(
