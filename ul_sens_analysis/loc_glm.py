@@ -39,8 +39,8 @@ def run(subj_id, acq_date):
     cond_details = {}
 
     # first, write the condition files
-    # here, i_vf of 0 is above, 1 is below
-    for (i_vf, vf) in enumerate(("above", "below")):
+    # here, i_vf of 0 is upper, 1 is lower
+    for (i_vf, vf) in enumerate(("upper", "lower")):
 
         # this is the file to write
         onset_path = "{s:s}-{v:s}_onsets.txt".format(s=inf_str, v=vf)
@@ -74,7 +74,7 @@ def run(subj_id, acq_date):
                     )
                 )
 
-                # pull out this visual field location - either above or below
+                # pull out this visual field location - either upper or lower
                 run_seq = run_seq[i_vf, ...]
 
                 # axis 0 is now trials
@@ -119,7 +119,7 @@ def run(subj_id, acq_date):
         ]
 
         # run the above and below GLMs separately
-        for vf in ("above", "below"):
+        for vf in ("upper", "lower"):
 
             # output GLM
             glm_filename = "{s:s}-loc_{v:s}-glm-{h:s}_nf.niml.dset".format(

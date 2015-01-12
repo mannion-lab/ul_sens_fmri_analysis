@@ -49,7 +49,7 @@ def _run_glm(subj_id, acq_date, conf, log_dir):
 
     os.chdir(glm_dir)
 
-    for vf in ("above", "below"):
+    for vf in ("upper", "lower"):
 
         cond_details = _write_onsets(
             subj_id=subj_id,
@@ -122,8 +122,8 @@ def _run_glm(subj_id, acq_date, conf, log_dir):
 
         desired_labels = []
 
-        for src_loc in ["upper", "lower"]:
-            for img_id in conf.exp.img_ids:
+        for img_id in conf.exp.img_ids:
+            for src_loc in ["above", "below"]:
                 desired_labels.append(
                     vf + "_" + src_loc + "_" + str(img_id) + "#0"
                 )
@@ -185,7 +185,7 @@ def _write_onsets(subj_id, acq_date, conf, vf, runs_type, log_dir):
         Date subject was scanned, in YYYYMMDD
     conf: ConfigContainer
         ul_sens_fmri config
-    vf: string, {"above", "below"}
+    vf: string, {"upper", "lower"}
         Presentation location
     runs_type: string, {"odd", "even", "all"}
         Whether to include the odd, even, or all runs
@@ -201,9 +201,9 @@ def _write_onsets(subj_id, acq_date, conf, vf, runs_type, log_dir):
 
     """
 
-    if vf == "above":
+    if vf == "upper":
         i_vf = 0
-    elif vf == "below":
+    elif vf == "lower":
         i_vf = 1
     else:
         raise ValueError("Unknown vf")
@@ -222,7 +222,6 @@ def _write_onsets(subj_id, acq_date, conf, vf, runs_type, log_dir):
             os.path.join(
                 log_dir,
                 subj_id + "_ul_sens_fmri_run_{n:02d}_seq.npy".format(
-                    s=subj_id,
                     n=run_num
                 )
             )
@@ -238,7 +237,7 @@ def _write_onsets(subj_id, acq_date, conf, vf, runs_type, log_dir):
     for img_id in conf.exp.img_ids:
 
         # source location
-        for (i_sl, sl) in enumerate(("upper", "lower")):
+        for (i_sl, sl) in enumerate(("above", "below")):
 
             # this is the file to write
             onset_path = "{s:s}-{v:s}_{sl:s}_{i:d}_onsets.txt".format(
@@ -270,13 +269,13 @@ def _write_onsets(subj_id, acq_date, conf, vf, runs_type, log_dir):
                     # run seq is (pres loc, trial number, trial info)
                     # where trial info is:
                     #   0: time, in seconds, when it starts
-                    #   1: source location 1 for upper, 2 for lower, 0 for null
+                    #   1: source location 1 for above, 2 for below, 0 for null
                     #   2: image id
                     #   3: whether it is in the 'pre' events
                     #   4: been prepped
 
-                    # pull out this visual field location - either above or
-                    # below
+                    # pull out this visual field location - either upper or
+                    # lower
                     curr_run_seq = run_seq[i_vf, ...]
 
                     # axis 0 is now trials

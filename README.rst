@@ -14,7 +14,7 @@ Run the localiser GLMs. These look at regions responsive to the timecourse of st
 
     ul_sens_analysis ${SUBJ_ID} ${ACQ_DATE} loc_glm
 
-This produces the beta and GLM files for the left and right hemispheres, saved in the subject's ``loc_analysis`` directory.
+This produces the beta and GLM files for the upper and lower visual fields and the left and right hemispheres, saved in the subject's ``loc_analysis`` directory. Open them in SUMA and verify the upper -> ventral, lower -> dorsal arrangement.
 
 Prepare the experiment GLM
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -27,6 +27,20 @@ We then average across all the nodes in a given ROI mask and hemisphere that are
 Run the experiment GLM
 ~~~~~~~~~~~~~~~~~~~~~~
 
-This runs a GLM for presentations above and below fixation, with events separated by whether they were drawn from the upper or lower part of the visual field. This GLM is based on the average nodes within each area. The resulting beta weights are converted to percent signal change::
+This runs a GLM for the upper and lower visual fields, with events separated by whether they were drawn from above or below fixation. This GLM is based on the average nodes within each area. The resulting beta weights are converted to percent signal change::
 
     ul_sens_analysis ${SUBJ_ID} ${ACQ_DATE} glm
+
+
+Group
+-----
+
+Response amplitude
+~~~~~~~~~~~~~~~~~~
+
+We get the response amplitude (psc) for each image, presentation location (upper, lower), source location (above, below), and ROI (V1, V2, V3) for each subject::
+
+    ul_sens_group_analysis resp_amp
+
+This saves both in complete numpy format and in a format suitable for SPSS, where images have been averaged over.
+
