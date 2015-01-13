@@ -10,12 +10,10 @@ import matplotlib.pyplot as plt
 plt.ioff()
 
 import numpy as np
-import scipy.stats
 import svgutils.transform as sg
 
 import psychopy.filters
 
-import fmri_tools.stats
 import runcmd
 
 import ul_sens_analysis.config
@@ -219,7 +217,7 @@ def get_img_fragments(save_path=None):
                 img = frags[img_id][vert + horiz]
                 img = (img + 1) / 2.0
 
-                img = (0.5 * (1 - mask) ) + (img * mask)
+                img = (0.5 * (1 - mask)) + (img * mask)
 
                 data[i_img, i_vert, i_horiz, ...] = img
 
@@ -239,7 +237,6 @@ def get_img_fragments(save_path=None):
                         fname,
                         (img * 255).astype("uint8")
                     )
-
 
     assert np.sum(np.isnan(data)) == 0
 
@@ -295,8 +292,6 @@ def write_stim_library(save_path):
                         "; Source location: " + src_loc +
                         "; Presentation location: " + pres_loc
                     )
-
-                    (root, ext) = os.path.splitext(sshot_file)
 
                     # made it this far, must be OK
                     cmd = [
@@ -358,7 +353,6 @@ def plot_top_resp_diff(save_path=None):
     figs = []
     texts = []
 
-    z = 0
     column = 0
 
     for (i_rank, rank_type) in zip((i_tops, i_bottoms), ("top", "bottom")):
@@ -446,8 +440,6 @@ def plot_top_resp_diff(save_path=None):
                 fig_plot.moveto(col_offset, row * 117 + 16, scale=0.7)
 
                 figs.append(fig_plot)
-
-                z += 1
 
             row += 1
 

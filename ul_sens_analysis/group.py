@@ -1,12 +1,6 @@
 import os
 
 import numpy as np
-import scipy.stats
-
-import fmri_tools.analysis
-import fmri_tools.utils
-
-import runcmd
 
 import ul_sens_analysis.config
 import ul_sens_fmri.config
@@ -82,8 +76,6 @@ def save_resp_amps_for_spss(data, txt_path):
 
     (n_subj, n_rois, n_pres, n_src) = data.shape
 
-    n_rows = n_subj * n_rois * n_pres * n_src
-
     header = []
 
     for i_roi in xrange(n_rois):
@@ -131,7 +123,7 @@ def difference_term():
     # average over ROIs
     data = np.mean(data, axis=1)
 
-    (n_subj, n_img, n_pres, n_src) = data.shape
+    (n_subj, n_img, _, n_src) = data.shape
 
     # this will hold the difference term
     diff = np.empty((n_subj, n_img, n_src))
