@@ -14,7 +14,9 @@ def main():
 
     proc_options = [
         "resp_amp_rois",
-        "resp_amp"
+        "resp_amp",
+        "stim_library",
+        "resp_diff"
     ]
 
     parser = argparse.ArgumentParser()
@@ -42,6 +44,20 @@ def main():
             "ul_sens_resp_amp"
         )
         ul_sens_analysis.figures.plot_resp_amp(save_path=save_path)
+
+    elif args.proc_step == "stim_library":
+        save_path = os.path.join(
+            conf.base_fig_dir,
+            "ul_sens_stim_library"
+        )
+        ul_sens_analysis.figures.write_stim_library(save_path=save_path)
+
+    elif args.proc_step == "resp_diff":
+        save_path = os.path.join(
+            conf.base_fig_dir,
+            "ul_sens_resp_diff"
+        )
+        ul_sens_analysis.figures.plot_top_resp_diff(save_path=save_path)
 
 
 if __name__ == "__main__":

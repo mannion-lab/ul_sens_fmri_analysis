@@ -44,3 +44,41 @@ We get the response amplitude (psc) for each image, presentation location (upper
 
 This saves both in complete numpy format and in a format suitable for SPSS, where images have been averaged over.
 
+Response differences
+~~~~~~~~~~~~~~~~~~~~
+
+We average over ROIs and calculate the difference between upper and lower visual field presentation for each image x source location pair, and then sort based on this difference (saved as ``ul_sens_group_amps_diffs_sorted.npy``)::
+
+    ul_sens_group_analysis resp_diffs
+
+
+Figures
+-------
+
+Amplitudes for each ROI
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Interaction plot for visual field and source locations, separately for each ROI::
+
+    ul_sens_group_figures resp_amp_rois
+
+Average amplitudes
+~~~~~~~~~~~~~~~~~~
+
+As above, but averaged over ROIs. This is the data that the stats are based on::
+
+    ul_sens_group_figurse resp_amp
+
+Stimulus library
+~~~~~~~~~~~~~~~~
+
+Form a PDF file where each page is an image, source location, and presenatation location::
+
+    ul_sens_group_figures stim_library
+
+Top response differences
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Plot the image fragments that evoked the top 5 largest differences between upper and lower visual field presentation (both signs)::
+
+    ul_sens_group_figures resp_diff
