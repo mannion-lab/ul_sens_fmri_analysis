@@ -352,7 +352,7 @@ def plot_top_resp_diff(save_path=None):
     i_bottoms = range(n_to_show)
     i_tops = range(-n_to_show, 0)[::-1]
 
-    main_fig = sg.SVGFigure("13.7cm", "17.2cm")
+    main_fig = sg.SVGFigure("13.7cm", "16.3cm")
 
     tmp_files = []
     figs = []
@@ -378,7 +378,8 @@ def plot_top_resp_diff(save_path=None):
                 src = "above"
             else:
                 src = "below"
-            diff_str += "; source = " + src
+
+            diff_str += "; source: " + src
 
             if rank_type == "top":
                 col_offset = 0
@@ -386,10 +387,10 @@ def plot_top_resp_diff(save_path=None):
                 col_offset = 140 * 2
 
             text = sg.TextElement(
-                col_offset + 0,
-                row * 125 + 10,
+                col_offset + 16,
+                row * 117 + 10,
                 diff_str,
-                size=12,
+                size=11,
                 font="FreeSans"
             )
 
@@ -442,7 +443,7 @@ def plot_top_resp_diff(save_path=None):
 
                 fig_plot = fig.getroot()
 
-                fig_plot.moveto(col_offset, row * 125 + 18, scale=0.7)
+                fig_plot.moveto(col_offset, row * 117 + 16, scale=0.7)
 
                 figs.append(fig_plot)
 
@@ -455,7 +456,12 @@ def plot_top_resp_diff(save_path=None):
     main_fig.append(figs)
     _ = [main_fig.append(text) for text in texts]
 
-    main_fig.save("/home/damien/tst.svg")
+    main_fig.save(save_path + ".svg")
+
+    figutils.svg_to_pdf(
+        svg_path=save_path + ".svg",
+        pdf_path=save_path + ".pdf"
+    )
 
     for tmp_file in tmp_files:
         os.remove(tmp_file)
