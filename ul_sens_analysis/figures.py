@@ -105,6 +105,11 @@ def plot_amps_visual_area(save_path, amp_data, roi_name=""):
     conf.ana = ul_sens_analysis.config.get_conf()
 
     # average and SE over subjects
+    subj_mean = np.mean(np.mean(amp_data, axis=-1), axis=-1)
+    grand_mean = np.mean(amp_data)
+
+    amp_data = (amp_data - subj_mean[:, np.newaxis, np.newaxis]) + grand_mean
+
     amp_mean = np.mean(amp_data, axis=0)
     amp_se = np.std(amp_data, axis=0, ddof=1) / amp_data.shape[0]
 
