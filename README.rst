@@ -42,7 +42,7 @@ We get the response amplitude (psc) for each image, presentation location (upper
 
     ul_sens_group_analysis resp_amp
 
-This saves both in complete numpy format and in a format suitable for SPSS, where images have been averaged over.
+This saves both in complete numpy format (``ul_sens_group_amp_data.npy``) and in a format suitable for SPSS (``ul_sens_group_amp_data_spss.txt``), where images have been averaged over.
 
 Response differences
 ~~~~~~~~~~~~~~~~~~~~
@@ -51,6 +51,12 @@ We average over ROIs and calculate the difference between upper and lower visual
 
     ul_sens_group_analysis resp_diffs
 
+Statistics
+~~~~~~~~~~
+
+Most of the statistics are performed in SPSS (AFNI doesn't have a simple three-way ANOVA command), but we run the simple effects analysis ourselves. This calculates t-tests comparing source locations for each presentation location, and also prints out descriptive stats::
+
+    ul_sens_group_analysis stats
 
 Figures
 -------
@@ -67,7 +73,7 @@ Average amplitudes
 
 As above, but averaged over ROIs. This is the data that the stats are based on::
 
-    ul_sens_group_figurse resp_amp
+    ul_sens_group_figures resp_amp
 
 Stimulus library
 ~~~~~~~~~~~~~~~~

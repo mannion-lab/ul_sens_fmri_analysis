@@ -1,6 +1,7 @@
 import os
 
 import numpy as np
+import scipy.stats
 
 import ul_sens_analysis.config
 import ul_sens_fmri.config
@@ -171,3 +172,50 @@ def difference_term():
         ),
         arr=rdiff
     )
+
+
+def stats():
+
+    conf = ul_sens_fmri.config.get_conf()
+    conf.ana = ul_sens_analysis.config.get_conf()
+
+    # this is subjects, rois, images, pres_loc, src_loc
+    data = np.load(
+        os.path.join(
+            conf.ana.base_group_dir,
+            "ul_sens_group_amp_data.npy"
+        )
+    )
+
+    # first, let's look a the interaction between presentation and source
+    # locations. we can average over rois and images
+    pres_x_src = np.mean(np.mean(data, axis=2), axis=1)
+
+    # normalise
+    subj_mean = np.mean(np.mean(pres_x_src, axis=-1), axis=-1)
+    grand_mean = np.mean(pres_x_src)
+
+    pres_x_src = (
+        (pres_x_src - subj_mean[:, np.newaxis, np.newaxis]) +
+        grand_mean
+    )
+
+    # t-test between above and below for upper and lower
+    print "T-test for pres x src (above - below):"
+    for (i_pres, pres_label) in zip(xrange(2), ("upper", "lower")):
+
+        (t, p) = scipy.stats.ttest_rel(
+            pres_x_src[:, i_pres, 0],
+            pres_x_src[:, i_pres, 1]
+        )
+
+        print "\t" + pres_label + ":"
+        print "\t\tt = " + str(t) + "; p = " + str(p)
+
+        src_mean = np.mean(pres_x_src[:, i_pres, :], axis=0)
+        src_sem = (
+            np.std(pres_x_src[:, i_pres, :], axis=0, ddof=1) /
+            np.sqrt(pres_x_src.shape[0])
+        )
+
+        print "\t\tMean = " + str(src_mean) + "; SEM = " + str(src_sem)
