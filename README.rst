@@ -1,5 +1,10 @@
 .. highlight:: bash
 
+This is the code to analyse the experiment described in "Sensitivity to the visual field origin of natural image patches in human low-level visual cortex".
+
+The code for running the experiment can be found at `https://bitbucket.org/djmannion/ul_sens_fmri <https://bitbucket.org/djmannion/ul_sens_fmri/>`_.
+
+
 ========
 Analysis
 ========
