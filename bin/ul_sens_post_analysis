@@ -10,7 +10,11 @@ import ul_sens_analysis.post
 def main():
     "Parse the command-line input and offload"
 
-    proc_options = ["node_distances"]
+    proc_options = [
+        "node_distances",
+        "resid",
+        "rsq"
+    ]
 
     parser = argparse.ArgumentParser()
 
