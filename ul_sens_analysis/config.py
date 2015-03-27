@@ -33,6 +33,8 @@ def get_conf():
 
     conf.loc_glm_dir = "loc_analysis"
 
+    conf.post_dir = "post_analysis"
+
     conf.n_to_censor = int(
         exp_conf.exp.n_pre_trials *
         exp_conf.exp.trial_len_s /
