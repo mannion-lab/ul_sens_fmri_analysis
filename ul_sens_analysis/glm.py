@@ -60,6 +60,27 @@ def _run_glm(subj_id, acq_date, conf, log_dir):
             log_dir=log_dir
         )
 
+        contrast_details = []
+
+        for src_loc in ["above", "below"]:
+
+            contrast = []
+
+            for curr_cond in cond_details:
+
+                if src_loc in curr_cond["name"]:
+
+                    contrast.append("+" + curr_cond["name"])
+
+            contrast = " ".join(contrast)
+
+            contrast_details.append(
+                {
+                    "label": src_loc + "_all",
+                    "contrast": contrast
+                }
+            )
+
         # these files have three nodes, one for each visual area
         run_paths = [
             os.path.join(
@@ -83,6 +104,16 @@ def _run_glm(subj_id, acq_date, conf, log_dir):
             s=inf_str, v=vf
         )
 
+        # to write
+        resid_filename = "{s:s}-{v:s}-resid-.niml.dset".format(
+            s=inf_str, v=vf
+        )
+
+        extra_reml_args = [
+            "-Rerrts", resid_filename,
+            "-rout"
+        ]
+
         # run the GLM on this visual field location
         fmri_tools.analysis.glm(
             run_paths=run_paths,
@@ -91,9 +122,10 @@ def _run_glm(subj_id, acq_date, conf, log_dir):
             beta_filename=beta_filename,
             tr_s=conf.ana.tr_s,
             cond_details=cond_details,
-            contrast_details=[],
+            contrast_details=contrast_details,
             censor_str=conf.ana.censor_str,
-            matrix_filename="exp_design_" + vf
+            matrix_filename="exp_design_" + vf,
+            extra_reml_args=extra_reml_args
         )
 
         # now to convert the beta weights to percent signal change

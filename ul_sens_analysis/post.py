@@ -1,6 +1,8 @@
 import os
 import logging
 
+import numpy as np
+
 import fmri_tools.utils
 
 import ul_sens_analysis.config
@@ -34,6 +36,10 @@ def run(subj_id, acq_date, post_type):
         node_distances(subj_id, acq_date, conf)
     elif post_type == "glm":
         glm(subj_id, acq_date, conf)
+    elif post_type == "resid":
+        resid(subj_id, acq_date, conf)
+    elif post_type == "rsq":
+        rsq(subj_id, acq_date, conf)
 
 
 def node_distances(subj_id, acq_date, conf):
@@ -298,5 +304,130 @@ def glm(subj_id, acq_date, conf):
 
             #runcmd.run_cmd(" ".join(cmd))
 
+def resid(subj_id, acq_date, conf):
+
+    subj_dir = os.path.join(conf.ana.base_subj_dir, subj_id)
+    ana_dir = os.path.join(subj_dir, "analysis")
+
+    post_dir = os.path.join(subj_dir, conf.ana.post_dir)
+    resid_dir = os.path.join(post_dir, "resid")
+
+    if not os.path.isdir(post_dir):
+        os.mkdir(post_dir)
+
+    if not os.path.isdir(resid_dir):
+        os.mkdir(resid_dir)
+
+    os.chdir(resid_dir)
+
+    inf_str = subj_id + "_ul_sens_" + acq_date
+
+    for vf in ["upper", "lower"]:
+
+        # in
+        bl_path = os.path.join(
+            ana_dir,
+            "{s:s}-{v:s}-bltc-.niml.dset".format(
+                s=inf_str, v=vf
+            )
+        )
+
+        # in
+        resid_path = os.path.join(
+            ana_dir,
+            "{s:s}-{v:s}-resid-.niml.dset".format(
+                s=inf_str, v=vf
+            )
+        )
+
+        # out
+        sse_path = "{s:s}-{v:s}-sse-.niml.dset".format(
+            s=inf_str, v=vf
+        )
+
+        # out
+        sse_psc_path = "{s:s}-{v:s}-sse_psc-.1D".format(
+            s=inf_str, v=vf
+        )
+
+        # calculate sum-of-squares
+        cmd = [
+            "3dTstat",
+            "-overwrite",
+            "-prefix", sse_path,
+            "-sos", resid_path
+        ]
+
+        runcmd.run_cmd(" ".join(cmd))
+
+        # convert to percent signal change
+        cmd = [
+            "3dcalc",
+            "-a", bl_path,
+            "-b", sse_path,
+            "-expr", "'100*b/a'",
+            "-overwrite",
+            "-prefix", sse_psc_path
+        ]
+
+        runcmd.run_cmd(" ".join(cmd))
 
 
+
+def rsq(subj_id, acq_date, conf):
+
+    subj_dir = os.path.join(conf.ana.base_subj_dir, subj_id)
+    ana_dir = os.path.join(subj_dir, "analysis")
+
+    post_dir = os.path.join(subj_dir, conf.ana.post_dir)
+    rsq_dir = os.path.join(post_dir, "rsq")
+
+    if not os.path.isdir(post_dir):
+        os.mkdir(post_dir)
+
+    if not os.path.isdir(rsq_dir):
+        os.mkdir(rsq_dir)
+
+    os.chdir(rsq_dir)
+
+    inf_str = subj_id + "_ul_sens_" + acq_date
+
+    for vf in ["upper", "lower"]:
+
+        # in
+        glm_path = os.path.join(
+            ana_dir,
+            "{s:s}-{v:s}-glm-.niml.dset".format(
+                s=inf_str, v=vf
+            )
+        )
+
+        bricks = "[184,187]"
+
+        # check the beta bricks are as expected
+        dset_labels = fmri_tools.utils.get_dset_label(
+            glm_path + bricks
+        )
+
+        desired_labels = ["above_all_R^2", "below_all_R^2"]
+
+        assert dset_labels == desired_labels
+
+        cmd = [
+            "3dmaskdump",
+            "-noijk",
+            glm_path + bricks
+        ]
+
+        cmd_out = runcmd.run_cmd(" ".join(cmd))
+
+        roi_rsq = cmd_out.std_out.splitlines()
+
+        rsq = [map(float, roi_r.split(" ")) for roi_r in roi_rsq]
+
+        # out
+        rsq_path = "{s:s}-{v:s}-rsq-.txt".format(
+                s=inf_str, v=vf
+        )
+
+        np.savetxt(rsq_path, rsq)
