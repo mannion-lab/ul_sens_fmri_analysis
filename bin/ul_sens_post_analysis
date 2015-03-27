@@ -1,0 +1,36 @@
+#! /usr/bin/env python2
+
+"Handles command-line input for the fMRI analysis"
+
+import argparse
+
+import ul_sens_analysis.post
+
+
+def main():
+    "Parse the command-line input and offload"
+
+    proc_options = ["node_distances"]
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument("subj_id", help="Subject ID")
+    parser.add_argument("acq_date", help="Acquisition date")
+
+    parser.add_argument(
+        "proc_step",
+        help="Processing step",
+        choices=proc_options
+    )
+
+    args = parser.parse_args()
+
+    ul_sens_analysis.post.run(
+        subj_id=args.subj_id,
+        acq_date=args.acq_date,
+        post_type=args.proc_step
+    )
+
+
+if __name__ == "__main__":
+    main()
