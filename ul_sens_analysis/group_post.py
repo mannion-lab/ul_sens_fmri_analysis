@@ -111,7 +111,6 @@ def resids(conf=None, subj_info=None):
         ),
         arr=data
     )
-    print 'a'
 
 #    save_resp_amps_for_spss(
 #        data=data,
