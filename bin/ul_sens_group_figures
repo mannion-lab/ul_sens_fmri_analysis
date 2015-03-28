@@ -17,7 +17,8 @@ def main():
         "resp_amp",
         "stim_library",
         "resp_diff",
-        "resid"
+        "resid",
+        "task"
     ]
 
     parser = argparse.ArgumentParser()
@@ -67,6 +68,12 @@ def main():
         )
         ul_sens_analysis.figures.plot_traces(save_path=save_path)
 
+    elif args.proc_step == "task":
+        save_path = os.path.join(
+            conf.base_fig_dir,
+            "ul_sens_task"
+        )
+        ul_sens_analysis.figures.plot_task(save_path=save_path)
 
 if __name__ == "__main__":
     main()
