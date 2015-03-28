@@ -219,3 +219,51 @@ def stats():
         )
 
         print "\t\tMean = " + str(src_mean) + "; SEM = " + str(src_sem)
+
+
+def resids(conf=None, subj_info=None):
+
+    if conf is None:
+        conf = ul_sens_fmri.config.get_conf()
+        conf.ana = ul_sens_analysis.config.get_conf()
+
+    if subj_info is None:
+        subj_info = conf.ana.subj_info
+
+    data = np.empty(
+        (
+            len(subj_info),  # subjects
+            len(conf.ana.roi_names),  # ROIs
+            2,  # pres_loc: upper, lower,
+            2,  # src loc
+            12  # window
+        )
+    )
+    data.fill(np.NAN)
+
+    for (i_subj, (subj_id, acq_date)) in enumerate(subj_info):
+
+        inf_str = subj_id + "_ul_sens_" + acq_date
+
+        traces_path = os.path.join(
+            conf.ana.base_subj_dir,
+            subj_id,
+            conf.ana.post_dir,
+            "resid",
+            "{s:s}--traces-.npy".format(s=inf_str)
+        )
+
+        traces = np.load(traces_path)
+
+        data[i_subj, ...] = traces
+
+    # check we've filled up 'data' correctly
+    assert np.sum(np.isnan(data)) == 0
+
+    np.save(
+        file=os.path.join(
+            conf.ana.base_group_dir,
+            "ul_sens_group_traces_data.npy"
+        ),
+        arr=data
+    )
