@@ -27,7 +27,7 @@ def plot_resp_amp(save_path=None):
     conf = ul_sens_fmri.config.get_conf()
     conf.ana = ul_sens_analysis.config.get_conf()
 
-    # subjects x va x img x pres (A,B) x src (U, L)
+    # subjects x va x img x pres (U,L) x src (A, B)
     amp_data = np.load(
         os.path.join(
             conf.ana.base_group_dir,
@@ -56,7 +56,7 @@ def plot_resp_amp_rois(save_path=None):
     conf = ul_sens_fmri.config.get_conf()
     conf.ana = ul_sens_analysis.config.get_conf()
 
-    # subjects x va x img x pres (A,B) x src (U, L)
+    # subjects x va x img x pres (U,L) x src (A,B)
     amp_data = np.load(
         os.path.join(
             conf.ana.base_group_dir,
@@ -90,6 +90,106 @@ def plot_resp_amp_rois(save_path=None):
     v3_plot.moveto(170 * 2, 0, scale=1.25)
 
     fig.append([v1_plot, v2_plot, v3_plot])
+
+    fig.save(save_path + ".svg")
+
+    figutils.svg_to_pdf(
+        svg_path=save_path + ".svg",
+        pdf_path=save_path + ".pdf"
+    )
+
+
+def plot_traces(save_path=None):
+
+    conf = ul_sens_fmri.config.get_conf()
+    conf.ana = ul_sens_analysis.config.get_conf()
+
+    # subjects x rois x pres (U, L) x src (A, B)
+    data = np.load(
+        os.path.join(
+            conf.ana.base_group_dir,
+            "ul_sens_group_traces_data.npy"
+        )
+    )
+
+    # average over subjects and ROIs
+    data = np.mean(np.mean(data, axis=0), axis=0)
+
+    h_off = 0.3
+    v_off = 0.3
+    h_max = 0.97
+    v_max = 0.97
+    v_lower_max = v_off + 0.1
+
+    symbols = ["o", "s"]
+    labels = ["Above", "Below"]
+    colours = conf.ana.source_colours
+    marker_size = 20
+
+    for (i_vf, vf) in enumerate(["upper", "lower"]):
+
+        (fig, ax_base, ax_plt) = figutils.setup_panel(
+            size=(1.6, 1.4),
+            offsets=(h_off, v_off),
+            scales=(h_max, v_max, v_lower_max),
+            draw_dashes=True
+        )
+
+
+        for i_src in xrange(2):
+
+            ax_plt.plot(
+                range(0, 24, 2),
+                data[i_vf, i_src, :],
+                color=colours[i_src],
+                label=labels[i_src]
+            )
+
+        ax_base.set_xlabel("Time (s)")
+
+        ax_base.set_xlim([-0.5, 24.5])
+        ax_base.set_xticks(range(0, 24, 4))
+        #ax_base.set_xticklabels(["Upper", "Lower"])
+
+        ax_plt.set_ylabel("Residual (psc)", y=0.45)
+
+        ax_plt.text(
+            x=0.05,
+            y=0.9,
+            s=vf.capitalize(),
+            transform=ax_plt.transAxes
+        )
+
+        if vf == "lower":
+            leg = plt.legend(
+                scatterpoints=1,
+                loc=(0.5, -0.2),
+                handletextpad=0
+            )
+            leg.draw_frame(False)
+
+            ax_plt.set_ylim([0.432,0.52])
+
+        else:
+            ax_plt.set_ylim([0.58, 0.72])
+
+        if save_path is not None:
+            fig_save_path = save_path + "_" + vf + ".svg"
+            plt.savefig(fig_save_path)
+
+        plt.close(fig)
+
+    fig = sg.SVGFigure("9.2cm", "3.56cm")
+
+    upper_fig = sg.fromfile(save_path + "_upper.svg")
+    upper_plot = upper_fig.getroot()
+    upper_plot.moveto(0, 0, scale=1.25)
+
+    lower_fig = sg.fromfile(save_path + "_lower.svg")
+    lower_plot = lower_fig.getroot()
+    lower_plot.moveto(170, 0, scale=1.25)
+
+    fig.append([upper_plot, lower_plot])
 
     fig.save(save_path + ".svg")
 

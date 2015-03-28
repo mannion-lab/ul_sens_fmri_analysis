@@ -193,8 +193,8 @@ def run(subj_id, acq_date):
 
             assert trial_count == 60
 
-            # convert to an average
-            traces[:, i_vf, ...] /= (30.0 * conf.exp.n_runs)
+        # convert to an average
+        traces[:, i_vf, ...] /= (30.0 * conf.exp.n_runs)
 
     # out
     traces_path = "{s:s}--traces-.npy".format(
