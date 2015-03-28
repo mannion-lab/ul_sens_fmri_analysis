@@ -99,6 +99,67 @@ def plot_resp_amp_rois(save_path=None):
     )
 
 
+def plot_task(save_path=None):
+
+    conf = ul_sens_fmri.config.get_conf()
+    conf.ana = ul_sens_analysis.config.get_conf()
+
+    # subjects x pres x src x time bins
+    data = np.load(
+        os.path.join(
+            conf.ana.base_group_dir,
+            "ul_sens_group_perf_data.npy"
+        )
+    )
+
+    h_off = 0.2
+    v_off = 0.2
+    h_max = 0.97
+    v_max = 0.97
+    v_lower_max = v_off + 0.001
+
+    symbols = ["o", "s"]
+    styles = ["-", "--"]
+    labels = ["Above", "Below"]
+    colours = conf.ana.source_colours
+    marker_size = 20
+
+    (fig, ax_base, ax_plt) = figutils.setup_panel(
+        size=(1.6 * 2, 1.4 * 2),
+        offsets=(h_off, v_off),
+        scales=(h_max, v_max, v_lower_max),
+        draw_dashes=False
+    )
+
+    for (i_pres, pres) in enumerate(["Upper", "Lower"]):
+        for (i_src, src) in enumerate(["Above", "Below"]):
+
+            col = colours[i_src]
+            style = styles[i_pres]
+
+            ax_plt.plot(
+                np.arange(0, data.shape[-1] * 0.1, 0.1),
+                data[0, i_pres, i_src, :],
+                color=col,
+                linestyle=style,
+                label=pres + ", " + src
+            )
+
+    leg = plt.legend(
+        scatterpoints=3,
+        loc=(0.6, 0.6),
+        handletextpad=0
+    )
+    leg.draw_frame(False)
+
+    ax_base.set_xlabel("Time from target onset (s)")
+    ax_plt.set_ylabel("Correlation (r)")
+
+    plt.savefig(save_path + ".pdf")
+
+    plt.close()
+
+
 def plot_traces(save_path=None):
 
     conf = ul_sens_fmri.config.get_conf()
