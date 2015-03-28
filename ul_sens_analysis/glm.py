@@ -109,10 +109,7 @@ def _run_glm(subj_id, acq_date, conf, log_dir):
             s=inf_str, v=vf
         )
 
-        extra_reml_args = [
-            "-Rerrts", resid_filename,
-            "-rout"
-        ]
+        extra_reml_args = ["-Rerrts", resid_filename]
 
         # run the GLM on this visual field location
         fmri_tools.analysis.glm(
