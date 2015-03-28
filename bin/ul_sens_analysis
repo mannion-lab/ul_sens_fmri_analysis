@@ -9,6 +9,7 @@ import ul_sens_analysis.loc_glm
 import ul_sens_analysis.glm_prep
 import ul_sens_analysis.glm
 import ul_sens_analysis.resid
+import ul_sens_analysis.task
 
 
 def main():
@@ -20,6 +21,7 @@ def main():
     proc_options["glm_prep"] = ul_sens_analysis.glm_prep.run
     proc_options["glm"] = ul_sens_analysis.glm.run
     proc_options["resid"] = ul_sens_analysis.resid.run
+    proc_options["task"] = ul_sens_analysis.task.run
 
     parser = argparse.ArgumentParser()
 

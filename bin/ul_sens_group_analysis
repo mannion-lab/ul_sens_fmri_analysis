@@ -15,7 +15,8 @@ def main():
         "resp_amp",
         "resp_diffs",
         "stats",
-        "resids"
+        "resids",
+        "tasks"
     ]
 
     parser = argparse.ArgumentParser()
@@ -40,6 +41,8 @@ def main():
     elif args.proc_step == "resids":
         ul_sens_analysis.group.resids()
 
+    elif args.proc_step == "tasks":
+        ul_sens_analysis.group.tasks()
 
 if __name__ == "__main__":
     main()

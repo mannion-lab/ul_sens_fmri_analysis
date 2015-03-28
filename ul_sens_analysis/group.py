@@ -267,3 +267,51 @@ def resids(conf=None, subj_info=None):
         ),
         arr=data
     )
+
+
+def tasks(conf=None, subj_info=None):
+
+    if conf is None:
+        conf = ul_sens_fmri.config.get_conf()
+        conf.ana = ul_sens_analysis.config.get_conf()
+
+    if subj_info is None:
+        subj_info = conf.ana.subj_info
+
+    data = np.empty(
+        (
+            len(subj_info),
+            2,  # pres loc
+            2,  # src loc
+            10  # perf bins
+        )
+    )
+    data.fill(np.NAN)
+
+    for (i_subj, (subj_id, acq_date)) in enumerate(subj_info):
+
+        inf_str = subj_id + "_ul_sens_" + acq_date
+
+        perf_path = os.path.join(
+            conf.ana.base_subj_dir,
+            subj_id,
+            conf.ana.post_dir,
+            "task",
+            "{s:s}--perf-.npy".format(s=inf_str)
+        )
+
+        perf = np.load(perf_path)
+
+        data[i_subj, ...] = perf
+
+    # check we've filled up 'data' correctly
+    assert np.sum(np.isnan(data)) == 0
+
+    np.save(
+        file=os.path.join(
+            conf.ana.base_group_dir,
+            "ul_sens_group_perf_data.npy"
+        ),
+        arr=data
+    )
+
