@@ -101,7 +101,7 @@ def run(subj_id, acq_date):
         bl = np.array(map(float, cmd_out.std_out.splitlines()))
 
         # convert the residuals to to PSC units
-        resid_flat = 100 * (resid_flat / bl)
+        resid_flat = 100 * (resid_flat / bl[:, np.newaxis])
 
         # want to split it into runs rather than one flat timecourse
         # want to exclude the initial censored volumes
