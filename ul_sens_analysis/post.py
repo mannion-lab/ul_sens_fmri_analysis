@@ -350,6 +350,14 @@ def resid(subj_id, acq_date, conf):
 
         cmd_out = runcmd.run_cmd(" ".join(cmd), log_stdout=False)
 
+        # this is ROIs x time
+        resid_flat = np.array(
+            [
+                map(float, roi_resid.split(" "))
+                for roi_resid in cmd_out.std_out.splitlines()
+            ]
+        )
+
         # baseline
         bl_path = os.path.join(
             ana_dir,
@@ -368,16 +376,6 @@ def resid(subj_id, acq_date, conf):
 
         # get a baseline value
         bl = np.array(map(float, cmd_out.std_out.splitlines()))
-
-        print bl
-
-        # this is ROIs x time
-        resid_flat = np.array(
-            [
-                map(float, roi_resid.split(" "))
-                for roi_resid in cmd_out.std_out.splitlines()
-            ]
-        )
 
         # convert to PSC
         resid_flat = 100 * (resid_flat / bl[:, np.newaxis])
@@ -432,6 +430,8 @@ def resid(subj_id, acq_date, conf):
             # axis 0 is now trials
             n_trials = run_seq.shape[0]
 
+            trial_count = 0
+
             for i_trial in xrange(n_trials):
 
                 trial_ok = np.all(
@@ -458,6 +458,12 @@ def resid(subj_id, acq_date, conf):
                 )
 
                 traces[:, i_vf, trial_type, :] += shifted_resid[:, :n_window]
+
+                trial_count += 1
+
+            assert trial_count == 60
+
+            traces[:, i_vf, ...] /= (30.0 * conf.exp.n_runs)
 
     # out
     traces_path = "{s:s}--traces-.npy".format(
