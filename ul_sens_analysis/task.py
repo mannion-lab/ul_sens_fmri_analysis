@@ -30,7 +30,7 @@ def run(subj_id, acq_date):
 
     os.chdir(task_dir)
 
-    bin_res = 0.2
+    bin_res = 0.1
 
     bin_left_edges = np.arange(0.0, conf.exp.run_len_s - 32.0, bin_res)
     n_bins = len(bin_left_edges)
@@ -73,6 +73,8 @@ def run(subj_id, acq_date):
 
         for i_task in xrange(run_task.shape[0]):
 
+            # one subject misunderstood the task for the first five runs and
+            # responded to the digits in a first 'practice' run
             if subj_id == "p1004" and i_run < 5:
 
                 if (
@@ -153,9 +155,12 @@ def run(subj_id, acq_date):
 
             task_src = int(run_seq[task_vf, i_task, 1] - 1)
 
+            if task_src == -1:
+                continue
+
             tasks[i_run, task_vf, task_src, i_bin] = 1
 
-    n_perf_bins = 10
+    n_perf_bins = 20
 
     perf = np.empty((2, 2, n_perf_bins))
     perf.fill(np.NAN)

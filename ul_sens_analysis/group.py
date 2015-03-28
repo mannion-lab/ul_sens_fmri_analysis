@@ -3,6 +3,8 @@ import os
 import numpy as np
 import scipy.stats
 
+import fmri_tools.stats
+
 import ul_sens_analysis.config
 import ul_sens_fmri.config
 
@@ -283,7 +285,7 @@ def tasks(conf=None, subj_info=None):
             len(subj_info),
             2,  # pres loc
             2,  # src loc
-            10  # perf bins
+            20  # perf bins
         )
     )
     data.fill(np.NAN)
@@ -315,3 +317,16 @@ def tasks(conf=None, subj_info=None):
         arr=data
     )
 
+    # run the stats
+    i_avg = range(4, 10)
+
+    # average over the window
+    perf_data = np.mean(data[..., i_avg], axis=-1)
+
+    stats = fmri_tools.stats.anova(
+        data=perf_data,
+        output_path="/tmp",
+        factor_names=["pres", "src"]
+    )
+
+    print stats
