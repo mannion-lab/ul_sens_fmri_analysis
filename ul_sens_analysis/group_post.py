@@ -78,7 +78,9 @@ def resids(conf=None, subj_info=None):
         (
             len(subj_info),  # subjects
             len(conf.ana.roi_names),  # ROIs
-            2  # pres_loc: upper, lower
+            2,  # pres_loc: upper, lower,
+            2,  # src loc
+            12  # window
         )
     )
     data.fill(np.NAN)
@@ -87,24 +89,17 @@ def resids(conf=None, subj_info=None):
 
         inf_str = subj_id + "_ul_sens_" + acq_date
 
-        for (i_vf, vf) in enumerate(["upper", "lower"]):
+        traces_path = os.path.join(
+            conf.ana.base_subj_dir,
+            subj_id,
+            conf.ana.post_dir,
+            "resid",
+            "{s:s}--traces-.npy".format(s=inf_str)
+        )
 
-            sse_psc_path = os.path.join(
-                conf.ana.base_subj_dir,
-                subj_id,
-                conf.ana.post_dir,
-                "resid",
-                "{s:s}-{v:s}-sse_psc-.1D".format(
-                    s=inf_str, v=vf
-                )
-            )
+        traces = np.load(traces_path)
 
-            # this will be a ROIs long vector
-            sse_psc = np.loadtxt(sse_psc_path)
-
-            assert len(sse_psc) == len(conf.ana.roi_names)
-
-            data[i_subj, :, i_vf] = sse_psc
+        data[i_subj, ...] = traces
 
     # check we've filled up 'data' correctly
     assert np.sum(np.isnan(data)) == 0
@@ -112,10 +107,11 @@ def resids(conf=None, subj_info=None):
     np.save(
         file=os.path.join(
             conf.ana.base_post_group_dir,
-            "ul_sens_post_group_sse_data.npy"
+            "ul_sens_post_group_traces_data.npy"
         ),
         arr=data
     )
+    print 'a'
 
 #    save_resp_amps_for_spss(
 #        data=data,
