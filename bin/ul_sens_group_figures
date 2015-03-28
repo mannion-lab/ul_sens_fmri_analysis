@@ -16,7 +16,8 @@ def main():
         "resp_amp_rois",
         "resp_amp",
         "stim_library",
-        "resp_diff"
+        "resp_diff",
+        "resid"
     ]
 
     parser = argparse.ArgumentParser()
@@ -58,6 +59,13 @@ def main():
             "ul_sens_resp_diff"
         )
         ul_sens_analysis.figures.plot_top_resp_diff(save_path=save_path)
+
+    elif args.proc_step == "resid":
+        save_path = os.path.join(
+            conf.base_fig_dir,
+            "ul_sens_resid"
+        )
+        ul_sens_analysis.figures.plot_traces(save_path=save_path)
 
 
 if __name__ == "__main__":
