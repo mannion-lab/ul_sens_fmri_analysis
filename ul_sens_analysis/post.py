@@ -37,10 +37,9 @@ def run(subj_id, acq_date, post_type):
     elif post_type == "glm":
         glm(subj_id, acq_date, conf)
     elif post_type == "resid":
-        resid(subj_id, acq_date, conf)
+        return resid(subj_id, acq_date, conf)
     elif post_type == "rsq":
         rsq(subj_id, acq_date, conf)
-
 
 def node_distances(subj_id, acq_date, conf):
 
@@ -322,15 +321,18 @@ def resid(subj_id, acq_date, conf):
 
     inf_str = subj_id + "_ul_sens_" + acq_date
 
-    for vf in ["upper", "lower"]:
+    n_window = 12
 
-        # in
-        bl_path = os.path.join(
-            ana_dir,
-            "{s:s}-{v:s}-bltc-.niml.dset".format(
-                s=inf_str, v=vf
-            )
+    traces = np.zeros(
+        (
+            3,  # ROI
+            2,  # vf
+            2,  # src
+            n_window  # time
         )
+    )
+
+    for (i_vf, vf) in enumerate(["upper", "lower"]):
 
         # in
         resid_path = os.path.join(
@@ -340,38 +342,129 @@ def resid(subj_id, acq_date, conf):
             )
         )
 
-        # out
-        sse_path = "{s:s}-{v:s}-sse-.niml.dset".format(
-            s=inf_str, v=vf
-        )
-
-        # out
-        sse_psc_path = "{s:s}-{v:s}-sse_psc-.1D".format(
-            s=inf_str, v=vf
-        )
-
-        # calculate sum-of-squares
         cmd = [
-            "3dTstat",
-            "-overwrite",
-            "-prefix", sse_path,
-            "-sos", resid_path
+            "3dmaskdump",
+            "-noijk",
+            resid_path
         ]
 
-        runcmd.run_cmd(" ".join(cmd))
+        cmd_out = runcmd.run_cmd(" ".join(cmd), log_stdout=False)
 
-        # convert to percent signal change
+        # baseline
+        bl_path = os.path.join(
+            ana_dir,
+            "{s:s}-{v:s}-bltc-.niml.dset".format(
+                s=inf_str, v=vf
+            )
+        )
+
         cmd = [
-            "3dcalc",
-            "-a", bl_path,
-            "-b", sse_path,
-            "-expr", "'100*b/a'",
-            "-overwrite",
-            "-prefix", sse_psc_path
+            "3dmaskdump",
+            "-noijk",
+            bl_path
         ]
 
-        runcmd.run_cmd(" ".join(cmd))
+        cmd_out = runcmd.run_cmd(" ".join(cmd), log_stdout=False)
 
+        # get a baseline value
+        bl = np.array(map(float, cmd_out.std_out.splitlines()))
+
+        print bl
+
+        # this is ROIs x time
+        resid_flat = np.array(
+            [
+                map(float, roi_resid.split(" "))
+                for roi_resid in cmd_out.std_out.splitlines()
+            ]
+        )
+
+        # convert to PSC
+        resid_flat = 100 * (resid_flat / bl[:, np.newaxis])
+
+        # want to split it into runs
+        vols_per_run = (
+            int(resid_flat.shape[1] / conf.exp.n_runs) - (conf.ana.n_to_censor + 1)
+        )
+        vols_per_run_total = int(resid_flat.shape[1]) / conf.exp.n_runs
+
+        resid = np.empty(
+            (
+                resid_flat.shape[0],
+                conf.exp.n_runs,
+                vols_per_run
+            )
+        )
+        resid.fill(np.NAN)
+
+        for i_run in xrange(conf.exp.n_runs):
+
+            i_start = i_run * vols_per_run_total + conf.ana.n_to_censor + 1
+            i_end = i_start + vols_per_run
+
+            resid[:, i_run, :] = resid_flat[:, i_start:i_end]
+
+        # convert to squared error
+        resid = resid ** 2
+
+        for i_run in xrange(conf.exp.n_runs):
+
+            # run seq is (pres loc, trial number, trial info)
+            # where trial info is:
+            #   0: time, in seconds, when it starts
+            #   1: source location 1 for above, 2 for below, 0 for null
+            #   2: image id
+            #   3: whether it is in the 'pre' events
+            #   4: been prepped
+            run_seq = np.load(
+                os.path.join(
+                    subj_dir,
+                    "logs",
+                    "{s:s}_ul_sens_fmri_run_{n:02d}_seq.npy".format(
+                        s=subj_id, n=i_run + 1
+                    )
+                )
+            )
+
+            # pull out this visual field location - either upper or lower
+            run_seq = run_seq[i_vf, ...]
+
+            # axis 0 is now trials
+            n_trials = run_seq.shape[0]
+
+            for i_trial in xrange(n_trials):
+
+                trial_ok = np.all(
+                    [
+                        run_seq[i_trial, 3] == 0,  # not a pre event
+                        run_seq[i_trial, 2] > 0.5,  # an image was shown
+                        run_seq[i_trial, 1] > 0  # not a null event
+                    ]
+                )
+
+                if not trial_ok:
+                    continue
+
+                onset_s = run_seq[i_trial, 0]
+                onset_vol = int(onset_s / conf.ana.tr_s)
+                onset_vol -= conf.ana.st_vols_to_ignore
+
+                trial_type = run_seq[i_trial, 1] - 1
+
+                shifted_resid = np.roll(
+                    resid[:, i_run, :],
+                    -onset_vol,
+                    axis=1
+                )
+
+                traces[:, i_vf, trial_type, :] += shifted_resid[:, :n_window]
+
+    # out
+    traces_path = "{s:s}--traces-.npy".format(
+        s=inf_str
+    )
+
+    np.save(traces_path, traces)
 
 
 def rsq(subj_id, acq_date, conf):
