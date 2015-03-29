@@ -9,7 +9,7 @@ import ul_sens_analysis.config
 import ul_sens_fmri.config
 
 
-def resp_amps(conf=None, subj_info=None):
+def resp_amps(conf=None, subj_info=None, loc_mask=True):
 
     if conf is None:
         conf = ul_sens_fmri.config.get_conf()
@@ -17,6 +17,11 @@ def resp_amps(conf=None, subj_info=None):
 
     if subj_info is None:
         subj_info = conf.ana.subj_info
+
+    if loc_mask:
+        mask_descrip = ""
+    else:
+        mask_descrip = "_ret_roi"
 
     data = np.empty(
         (
@@ -31,18 +36,30 @@ def resp_amps(conf=None, subj_info=None):
 
     for (i_subj, (subj_id, acq_date)) in enumerate(subj_info):
 
+        if loc_mask:
+            data_dir = os.path.join(
+                conf.ana.base_subj_dir,
+                subj_id,
+                "analysis"
+            )
+        else:
+            data_dir = os.path.join(
+                conf.ana.base_subj_dir,
+                subj_id,
+                "post_analysis",
+                "ret_roi"
+            )
+
         for (i_vf, vf) in enumerate(["upper", "lower"]):
 
             # this will be ROIs x (n_img x 2)
             # the columns are (above, below, above, below, ...)
             subj_data = np.loadtxt(
                 os.path.join(
-                    conf.ana.base_subj_dir,
-                    subj_id,
-                    "analysis",
+                    data_dir,
                     (
                         subj_id + "_ul_sens_" + acq_date + "-" +
-                        vf + "-data-amp.txt"
+                        vf + mask_descrip + "-data-amp.txt"
                     )
                 )
             )
@@ -55,20 +72,24 @@ def resp_amps(conf=None, subj_info=None):
     # check we've filled up 'data' correctly
     assert np.sum(np.isnan(data)) == 0
 
+    save_path = os.path.join(
+        conf.ana.base_group_dir,
+        "ul_sens_group_amp{m:s}_data.npy".format(m=mask_descrip)
+    )
+
     np.save(
-        file=os.path.join(
-            conf.ana.base_group_dir,
-            "ul_sens_group_amp_data.npy"
-        ),
+        file=save_path,
         arr=data
+    )
+
+    spss_save_path = os.path.join(
+        conf.ana.base_group_dir,
+        "ul_sens_group_amp{m:s}_data_spss.txt".format(m=mask_descrip)
     )
 
     save_resp_amps_for_spss(
         data=data,
-        txt_path=os.path.join(
-            conf.ana.base_group_dir,
-            "ul_sens_group_amp_data_spss.txt"
-        )
+        txt_path=spss_save_path
     )
 
 
