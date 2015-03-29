@@ -22,18 +22,30 @@ import ul_sens_fmri.config
 import ul_sens_fmri.stim
 
 
-def plot_resp_amp(save_path=None):
+def plot_resp_amp(save_path=None, loc_mask=True):
 
     conf = ul_sens_fmri.config.get_conf()
     conf.ana = ul_sens_analysis.config.get_conf()
 
-    # subjects x va x img x pres (U,L) x src (A, B)
-    amp_data = np.load(
-        os.path.join(
-            conf.ana.base_group_dir,
-            "ul_sens_group_amp_data.npy"
+    if loc_mask:
+
+        # subjects x va x img x pres (U,L) x src (A, B)
+        amp_data = np.load(
+            os.path.join(
+                conf.ana.base_group_dir,
+                "ul_sens_group_amp_data.npy"
+            )
         )
-    )
+
+    else:
+
+        # subjects x va x img x pres (U,L) x src (A, B)
+        amp_data = np.load(
+            os.path.join(
+                conf.ana.base_group_dir,
+                "ul_sens_group_amp_ret_roi_data.npy"
+            )
+        )
 
     # average over images
     amp_data = np.mean(amp_data, axis=2)
@@ -51,18 +63,30 @@ def plot_resp_amp(save_path=None):
     )
 
 
-def plot_resp_amp_rois(save_path=None):
+def plot_resp_amp_rois(save_path=None, loc_mask=True):
 
     conf = ul_sens_fmri.config.get_conf()
     conf.ana = ul_sens_analysis.config.get_conf()
 
-    # subjects x va x img x pres (U,L) x src (A,B)
-    amp_data = np.load(
-        os.path.join(
-            conf.ana.base_group_dir,
-            "ul_sens_group_amp_data.npy"
+    if loc_mask:
+
+        # subjects x va x img x pres (U,L) x src (A, B)
+        amp_data = np.load(
+            os.path.join(
+                conf.ana.base_group_dir,
+                "ul_sens_group_amp_data.npy"
+            )
         )
-    )
+
+    else:
+
+        # subjects x va x img x pres (U,L) x src (A, B)
+        amp_data = np.load(
+            os.path.join(
+                conf.ana.base_group_dir,
+                "ul_sens_group_amp_ret_roi_data.npy"
+            )
+        )
 
     # average over images
     amp_data = np.mean(amp_data, axis=2)
