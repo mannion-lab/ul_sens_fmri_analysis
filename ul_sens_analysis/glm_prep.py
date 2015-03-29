@@ -110,15 +110,18 @@ def _loc_to_mask(subj_id, acq_date, conf):
     return mask_paths
 
 
-def _extract_data(subj_id, acq_date, conf, mask_paths):
+def _extract_data(subj_id, acq_date, conf, mask_paths, loc_mask=True):
 
     inf_str = subj_id + "_ul_sens_" + acq_date
 
     subj_dir = os.path.join(conf.ana.base_subj_dir, subj_id)
 
-    mask_dir = os.path.join(subj_dir, "loc_analysis")
-
-    analysis_dir = os.path.join(subj_dir, "analysis")
+    if loc_mask:
+        mask_dir = os.path.join(subj_dir, "loc_analysis")
+        analysis_dir = os.path.join(subj_dir, "analysis")
+    else:
+        mask_dir = os.path.join(subj_dir, "post_analysis", "ret_roi")
+        analysis_dir = mask_dir
 
     n_rois = len(conf.ana.roi_names)
     n_vols_per_run = int(conf.exp.run_len_s / conf.ana.tr_s)
@@ -200,8 +203,13 @@ def _extract_data(subj_id, acq_date, conf, mask_paths):
             # average over hemispheres
             hemi_data = np.mean(hemi_data, axis=-1)
 
-            run_path = "{s:s}-run_{n:02d}-uw-{vf:s}_data.txt".format(
-                s=inf_str, n=run_num, vf=vf
+            if loc_mask:
+                mask_descrip = "_"
+            else:
+                mask_descrip = "_ret_roi_"
+
+            run_path = "{s:s}-run_{n:02d}-uw-{vf:s}{m:s}data.txt".format(
+                s=inf_str, n=run_num, vf=vf, m=mask_descrip
             )
 
             # save it out as a text file for this run; rois x vols
@@ -209,16 +217,16 @@ def _extract_data(subj_id, acq_date, conf, mask_paths):
 
             # we also want to save what 'nodes' in this data corresponds to; ie
             # ROI identifiers
-            run_nodes_path = "{s:s}-run_{n:02d}-uw-nodes.txt".format(
-                s=inf_str, n=run_num
+            run_nodes_path = "{s:s}-run_{n:02d}-uw-{vf:s}{m:s}nodes.txt".format(
+                s=inf_str, n=run_num, vf=vf, m=mask_descrip
             )
 
             np.savetxt(run_nodes_path, map(int, conf.ana.roi_numbers), "%d")
 
             # now we want to make it into an AFNI dataset so we can run the GLM
             # using their software
-            run_path_niml = "{s:s}-run_{n:02d}-uw-{v:s}_data.niml.dset".format(
-                s=inf_str, n=run_num, v=vf
+            run_path_niml = "{s:s}-run_{n:02d}-uw-{v:s}{m:s}data.niml.dset".format(
+                s=inf_str, n=run_num, v=vf, m=mask_descrip
             )
 
             cmd = [
@@ -239,7 +247,7 @@ def _extract_data(subj_id, acq_date, conf, mask_paths):
 
     os.chdir(analysis_dir)
 
-    data_path = "{s:s}-data.npy".format(s=inf_str)
+    data_path = "{s:s}-{m:s}data.npy".format(s=inf_str, m=mask_descrip)
 
     # we save the data here so we can access it independent of AFNI
     np.save(data_path, data)

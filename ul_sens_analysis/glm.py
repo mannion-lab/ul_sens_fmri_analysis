@@ -39,13 +39,18 @@ def run(subj_id, acq_date):
     _run_glm(subj_id, acq_date, conf, log_dir)
 
 
-def _run_glm(subj_id, acq_date, conf, log_dir):
+def _run_glm(subj_id, acq_date, conf, log_dir, loc_mask=True):
 
     inf_str = subj_id + "_ul_sens_" + acq_date
 
     subj_dir = os.path.join(conf.ana.base_subj_dir, subj_id)
 
-    glm_dir = os.path.join(subj_dir, "analysis")
+    if loc_mask:
+        glm_dir = os.path.join(subj_dir, "analysis")
+        mask_descrip = ""
+    else:
+        glm_dir = os.path.join(subj_dir, "post_analysis", "ret_roi")
+        mask_descrip = "_ret_roi"
 
     os.chdir(glm_dir)
 
@@ -87,26 +92,26 @@ def _run_glm(subj_id, acq_date, conf, log_dir):
                 subj_dir,
                 "func",
                 "run_{n:02d}".format(n=run_num),
-                "{s:s}-run_{n:02d}-uw-{vf:s}_data.niml.dset".format(
-                    s=inf_str, n=run_num, vf=vf
+                "{s:s}-run_{n:02d}-uw-{vf:s}{m:s}_data.niml.dset".format(
+                    s=inf_str, n=run_num, vf=vf, m=mask_descrip
                 )
             )
             for run_num in range(1, conf.exp.n_runs + 1)
         ]
 
         # to write
-        glm_filename = "{s:s}-{v:s}-glm-.niml.dset".format(
-            s=inf_str, v=vf
+        glm_filename = "{s:s}-{v:s}{m:s}-glm-.niml.dset".format(
+            s=inf_str, v=vf, m=mask_descrip
         )
 
         # to write
-        beta_filename = "{s:s}-{v:s}-beta-.niml.dset".format(
-            s=inf_str, v=vf
+        beta_filename = "{s:s}-{v:s}{m:s}-beta-.niml.dset".format(
+            s=inf_str, v=vf, m=mask_descrip
         )
 
         # to write
-        resid_filename = "{s:s}-{v:s}-resid-.niml.dset".format(
-            s=inf_str, v=vf
+        resid_filename = "{s:s}-{v:s}{m:s}-resid-.niml.dset".format(
+            s=inf_str, v=vf, m=mask_descrip
         )
 
         extra_reml_args = ["-Rerrts", resid_filename]
@@ -128,18 +133,18 @@ def _run_glm(subj_id, acq_date, conf, log_dir):
         # now to convert the beta weights to percent signal change
 
         # baseline timecourse
-        bltc_filename = "{s:s}-{v:s}-bltc-.niml.dset".format(
-            s=inf_str, v=vf
+        bltc_filename = "{s:s}-{v:s}{m:s}-bltc-.niml.dset".format(
+            s=inf_str, v=vf, m=mask_descrip
         )
 
         # baseline
-        bl_filename = "{s:s}-{v:s}-bltc-.niml.dset".format(
-            s=inf_str, v=vf
+        bl_filename = "{s:s}-{v:s}{m:s}-bltc-.niml.dset".format(
+            s=inf_str, v=vf, m=mask_descrip
         )
 
         # psc
-        psc_filename = "{s:s}-{v:s}-psc-.niml.dset".format(
-            s=inf_str, v=vf
+        psc_filename = "{s:s}-{v:s}{m:s}-psc-.niml.dset".format(
+            s=inf_str, v=vf, m=mask_descrip
         )
 
         beta_bricks = "[40..$]"
@@ -169,8 +174,8 @@ def _run_glm(subj_id, acq_date, conf, log_dir):
             psc_path=psc_filename,
         )
 
-        data_filename = "{s:s}-{v:s}-data-amp.txt".format(
-            s=inf_str, v=vf
+        data_filename = "{s:s}-{v:s}{m:s}-data-amp.txt".format(
+            s=inf_str, v=vf, m=mask_descrip
         )
 
         if os.path.exists(data_filename):
@@ -186,8 +191,8 @@ def _run_glm(subj_id, acq_date, conf, log_dir):
         runcmd.run_cmd(" ".join(cmd))
 
         # save the betas as text file also, for exploration / checking
-        b_filename = "{s:s}-{v:s}-beta-amp.txt".format(
-            s=inf_str, v=vf
+        b_filename = "{s:s}-{v:s}{m:s}-beta-amp.txt".format(
+            s=inf_str, v=vf, m=mask_descrip
         )
 
         if os.path.exists(b_filename):

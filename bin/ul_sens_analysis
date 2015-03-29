@@ -10,6 +10,7 @@ import ul_sens_analysis.glm_prep
 import ul_sens_analysis.glm
 import ul_sens_analysis.resid
 import ul_sens_analysis.task
+import ul_sens_analysis.ret_roi
 
 
 def main():
@@ -22,6 +23,7 @@ def main():
     proc_options["glm"] = ul_sens_analysis.glm.run
     proc_options["resid"] = ul_sens_analysis.resid.run
     proc_options["task"] = ul_sens_analysis.task.run
+    proc_options["ret_roi"] = ul_sens_analysis.ret_roi.run
 
     parser = argparse.ArgumentParser()
 
