@@ -92,6 +92,8 @@ def resp_amps(conf=None, subj_info=None, loc_mask=True):
         txt_path=spss_save_path
     )
 
+    return data
+
 
 def save_resp_amps_for_spss(data, txt_path):
 
@@ -149,22 +151,7 @@ def difference_term():
 
     (n_subj, n_img, _, n_src) = data.shape
 
-    # this will hold the difference term
-    diff = np.empty((n_subj, n_img, n_src))
-    diff.fill(np.NAN)
-
-    for i_subj in xrange(n_subj):
-        for i_img in xrange(n_img):
-            for i_src_loc in xrange(n_src):
-
-                resp = data[i_subj, i_img, :, i_src_loc]
-
-                # above - below
-                curr_diff = resp[0] - resp[1]
-
-                diff[i_subj, i_img, i_src_loc] = curr_diff
-
-    assert np.sum(np.isnan(diff)) == 0
+    diff = data[:, :, 0, :] - data[:, :, 1, :]
 
     diff = np.mean(diff, axis=0)
 
@@ -195,6 +182,8 @@ def difference_term():
         ),
         arr=rdiff
     )
+
+    return diff
 
 
 def stats():
