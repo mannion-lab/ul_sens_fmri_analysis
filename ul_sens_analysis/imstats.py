@@ -224,7 +224,7 @@ def _get_filter_bank():
     # aspect
     gamma = 1
     # phases
-    psis = np.array([0.0, np.pi / 2])
+    psis = np.array([np.pi / 2])
 
     filter_bank = []
 
