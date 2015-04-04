@@ -407,20 +407,22 @@ def test_radial_bias():
                 )
 
 
-def calc_stats():
+def calc_hist_stats():
 
     conf = ul_sens_fmri.config.get_conf()
 
     # (image, ab, lr, 353, 353, 3)
     dkl = load_dkl_frags()
 
+    (n_img, n_src, n_horiz, _, _, n_chan) = dkl.shape
+
     stats = np.empty(
         (
-            3,  # mean, std, slope
-            dkl.shape[0],
-            dkl.shape[1],
-            2,  # lr
-            3  # dkl
+            2,  # mean, std
+            n_img,
+            n_src,
+            n_horiz,  # lr
+            n_chan  # dkl
         )
     )
     stats.fill(np.NAN)
@@ -432,10 +434,10 @@ def calc_stats():
         range=[0,1]
     )
 
-    for i_img in xrange(stats.shape[1]):
-        for i_src in xrange(stats.shape[2]):
-            for i_h in xrange(stats.shape[3]):
-                for i_chan in xrange(stats.shape[-1]):
+    for i_img in xrange(n_img):
+        for i_src in xrange(n_src):
+            for i_h in xrange(n_horiz):
+                for i_chan in xrange(n_chan):
 
                     frag = dkl[i_img, i_src, i_h, :, :, i_chan]
 
@@ -449,21 +451,29 @@ def calc_stats():
                     # std
                     frag_std = np.std(frag_vals)
 
-                    # slope
-                    amp_spec = stimuli.utils.get_amp_spectrum(frag, True)
-                    (_, slope) = np.polyfit(
-                        x=np.log(amp_spec[:, 0]),
-                        y=np.log(amp_spec[:, 1]),
-                        deg=1
-                    )
-
                     stats[:, i_img, i_src, i_h, i_chan] = [
                         frag_mean,
-                        frag_std,
-                        slope
+                        frag_std
                     ]
 
+    hist_path = os.path.join(
+        "/sci/study/ul_sens/imstats",
+        "ul_sens_img_hist_output.npy"
+    )
+
+    np.save(hist_path, stats)
+
     return stats
+
+
+def load_hist_stats():
+
+    hist_path = os.path.join(
+        "/sci/study/ul_sens/imstats",
+        "ul_sens_img_hist_output.npy"
+    )
+
+    return np.load(hist_path)
 
 
 def compare_with_data(stats=None):
