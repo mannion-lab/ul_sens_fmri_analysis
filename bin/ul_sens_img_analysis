@@ -11,6 +11,7 @@ def main():
     "Parse the command-line input and offload"
 
     proc_options = [
+        "hist",
         "filter",
     ]
 
@@ -24,7 +25,11 @@ def main():
 
     args = parser.parse_args()
 
-    if args.proc_step == "filter":
+
+    if args.proc_step == "hist":
+        ul_sens_analysis.imstats.calc_hist_stats()
+
+    elif args.proc_step == "filter":
         ul_sens_analysis.imstats.run_filter()
 
 
