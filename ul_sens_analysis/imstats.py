@@ -5,6 +5,7 @@ import itertools
 import numpy as np
 import scipy.misc
 import cv2
+import savReaderWriter
 
 import psychopy.monitors
 import psychopy.misc
@@ -192,19 +193,17 @@ def run_filter():
             for i_horiz in xrange(n_horiz):
                 for i_chan in xrange(n_chan):
 
-                    break
-
                     # extract the dkl image and mask out the edges
                     dkl_for_filt = dkl[i_img, i_src, i_horiz, ..., i_chan]
                     dkl_for_filt *= ap_mask
 
-                    # loop through each spatial frequency (ie wavelength)
-                    for i_wl in xrange(n_sf):
+                    # loop through each spatial frequency
+                    for i_sf in xrange(n_sf):
 
                         # apply the filter bank (different oris)
                         out = _apply_filter_bank(
                             dkl_for_filt,
-                            bank[i_wl]
+                            bank[i_sf]
                         )
 
                         # square, sum over space, square root
@@ -212,22 +211,20 @@ def run_filter():
                             np.sum(np.sum(out ** 2, axis=-1), axis=-1)
                         )
 
-                        filt_out[i_img, i_src, i_horiz, i_chan, i_wl, :] = out
+                        filt_out[i_img, i_src, i_horiz, i_chan, i_sf, :] = out
 
     out_dir = "/sci/study/ul_sens/imstats"
 
-#    np.save(
-#        os.path.join(
-#            out_dir,
-#            "ul_sens_img_filter_output.npy"
-#        ),
-#        filt_out
-#    )
-
-    filt_out = np.load(out_dir + "/ul_sens_img_filter_output.npy")
+    np.save(
+        os.path.join(
+            out_dir,
+            "ul_sens_img_filter_output.npy"
+        ),
+        filt_out
+    )
 
     # save for SPSS
-    spss_path = os.path.join(out_dir, "ul_sens_img_filter_output_spss.txt")
+    spss_path = os.path.join(out_dir, "ul_sens_img_filter_output_spss.sav")
 
     var_names = []
     var_types = {}
@@ -252,8 +249,7 @@ def run_filter():
         var_names.append(var_name)
         var_types[var_name] = 0
 
-#    with open(spss_path, "w") as spss_file:
-    with SavWriter(spss_path, var_names, var_types) as spss_file:
+    with savReaderWriter.SavWriter(spss_path, var_names, var_types) as spss_file:
 
         for i_img in range(n_img):
 
@@ -269,16 +265,6 @@ def run_filter():
                 img_data.append(data)
 
             spss_file.writerow(img_data)
-
-                spss_file.write("{dv:.10f}\t".format(dv=data))
-
-savFileName = 'someFile.sav'
-records = [[b'Test1', 1, 1], [b'Test2', 2, 1]]
-varNames = ['var1', 'v2', 'v3']
-varTypes = {'var1': 5, 'v2': 0, 'v3': 0}
-with SavWriter(savFileName, varNames, varTypes) as writer:
-        for record in records:
-                    writer.writerow(record)
 
     return filt_out
 
@@ -312,8 +298,19 @@ def _apply_filter_bank(img, bank):
 
 def _get_filter_bank():
 
-    # wavelengths
-    lambdas = np.array([5, 10, 20, 40, 80])
+    # convert to cpd, for info
+    monitor = psychopy.monitors.Monitor("BOLDscreen")
+    one_deg_in_pix = psychopy.misc.deg2pix(1, monitor)
+
+    sfs = [1.0, 2.0, 4.0, 8.0, 16.0]
+
+    lambdas = []
+
+    for sf in sfs:
+        lambdas.append(
+            one_deg_in_pix / sf
+        )
+
     # oris
     thetas = np.radians([0, 45, 90, 135])
     # aspect
@@ -362,6 +359,52 @@ def _get_filter_bank():
         filter_bank.append(wl_filt)
 
     return filter_bank
+
+
+def load_filter_output():
+
+    filt_path = os.path.join(
+        "/sci/study/ul_sens/imstats",
+        "ul_sens_img_filter_output.npy"
+    )
+
+    return np.load(filt_path)
+
+
+def test_radial_bias():
+
+    filt_out = load_filter_output()
+
+    # average over SF
+    filt_out = np.mean(filt_out, axis=-2)
+
+    (n_img, n_src, n_horiz, n_chan, n_ori) = filt_out.shape
+
+    for i_chan in xrange(n_chan):
+        print "Channel: " + str(i_chan)
+
+        for i_src in xrange(n_src):
+            print "\tSource: " + str(i_src)
+
+            for i_horiz in xrange(n_horiz):
+                print "\t\tHoriz: " + str(i_horiz)
+
+                data = filt_out[:, i_src, i_horiz, i_chan, :]
+
+                # could use wilcoxon for non-parameteric, but then how to run
+                # other ANOVA based stats is unclear
+                test_meth = scipy.stats.ttest_rel
+                #test_meth = scipy.stats.wilcoxon
+
+                (t, p) = test_meth(data[:, 1], data[:, 3])
+
+                print "\t" * 3 + str(t) + ", " + str(p)
+                print "\t" * 3 + "{n:.3f}".format(
+                    n=np.median(data[:, 1] - data[:, 3])
+                )
+                print "\t" * 3 + "{n:.3f}".format(
+                    n=np.mean(data[:, 1] - data[:, 3])
+                )
 
 
 def calc_stats():
