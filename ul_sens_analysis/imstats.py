@@ -1,5 +1,6 @@
 
 import os
+import itertools
 
 import numpy as np
 import scipy.misc
@@ -156,40 +157,124 @@ def load_dkl_frags():
     return dkl_frags
 
 
-def filter():
+def run_filter():
 
     dkl = load_dkl_frags()
     bank = _get_filter_bank()
 
-    filt_out = np.empty((30, 2, 2, 3, 5, 4))
+    ap_mask = psychopy.filters.makeMask(
+        matrixSize=dkl.shape[-2],
+        shape="circle",
+        radius=0.9,
+        range=[0,1]
+    )
+
+    (n_img, n_src, n_horiz, _, _, n_chan) = dkl.shape
+
+    n_sf = len(bank)
+    n_ori = bank[0].shape[0]
+
+    # this is rather ugly
+    filt_out = np.empty(
+        (
+            n_img,
+            n_src,
+            n_horiz,
+            n_chan,
+            n_sf,
+            n_ori
+        )
+    )
     filt_out.fill(np.NAN)
 
-    for i_img in xrange(30):
-        for i_src in xrange(2):
-            for i_horiz in xrange(2):
-                for i_chan in xrange(3):
+    for i_img in xrange(n_img):
+        for i_src in xrange(n_src):
+            for i_horiz in xrange(n_horiz):
+                for i_chan in xrange(n_chan):
 
+                    break
+
+                    # extract the dkl image and mask out the edges
                     dkl_for_filt = dkl[i_img, i_src, i_horiz, ..., i_chan]
+                    dkl_for_filt *= ap_mask
 
-                    for i_wl in xrange(5):
+                    # loop through each spatial frequency (ie wavelength)
+                    for i_wl in xrange(n_sf):
+
+                        # apply the filter bank (different oris)
                         out = _apply_filter_bank(
                             dkl_for_filt,
                             bank[i_wl]
                         )
 
+                        # square, sum over space, square root
+                        out = np.sqrt(
+                            np.sum(np.sum(out ** 2, axis=-1), axis=-1)
+                        )
+
                         filt_out[i_img, i_src, i_horiz, i_chan, i_wl, :] = out
+
+    out_dir = "/sci/study/ul_sens/imstats"
+
+#    np.save(
+#        os.path.join(
+#            out_dir,
+#            "ul_sens_img_filter_output.npy"
+#        ),
+#        filt_out
+#    )
+
+    filt_out = np.load(out_dir + "/ul_sens_img_filter_output.npy")
+
+    # save for SPSS
+    spss_path = os.path.join(out_dir, "ul_sens_img_filter_output_spss.txt")
+
+    header = []
+
+    # header first - a monster loop
+    for (i_src, i_horiz, i_chan, i_sf, i_ori) in itertools.product(
+        range(n_src), range(n_horiz), range(n_chan), range(n_sf), range(n_ori)
+    ):
+
+        header.append(
+            "_".join(
+                [
+                    str(i_src + 1),
+                    str(i_horiz + 1),
+                    str(i_chan + 1),
+                    str(i_sf + 1),
+                    str(i_ori + 1)
+                ]
+            )
+        )
+
+    with open(spss_path, "w") as spss_file:
+
+        spss_file.write("\t".join(header))
+
+        for i_img in range(n_img):
+
+            spss_file.write("\n")
+
+            for (i_src, i_horiz, i_chan, i_sf, i_ori) in itertools.product(
+                range(n_src), range(n_horiz), range(n_chan), range(n_sf),
+                range(n_ori)
+            ):
+
+                data = filt_out[i_img, i_src, i_horiz, i_chan, i_sf, i_ori]
+
+                spss_file.write("{dv:.10f}\t".format(dv=data))
 
     return filt_out
 
 
 def _apply_filter_bank(img, bank):
 
-    (n_ori, n_phase, _, _) = bank.shape
+    n_ori = bank.shape[0]
 
     filt = np.empty(
         (
             n_ori,
-            n_phase,
             img.shape[0],
             img.shape[1]
         )
@@ -197,20 +282,15 @@ def _apply_filter_bank(img, bank):
     filt.fill(np.NAN)
 
     for i_ori in xrange(bank.shape[0]):
-        for i_phase in xrange(bank.shape[1]):
 
-            out = cv2.filter2D(
-                src=img,
-                kernel=bank[i_ori, i_phase, ...],
-                ddepth=cv2.CV_64F
-            )
+        # filter using openCV
+        out = cv2.filter2D(
+            src=img,
+            kernel=bank[i_ori, ...],
+            ddepth=cv2.CV_64F
+        )
 
-            filt[i_ori, i_phase, ...] = out
-
-    filt = np.sqrt(
-        np.sum(filt ** 2, axis=1)
-    )
-    filt = np.sum(np.sum(filt, axis=-1), axis=-1)
+        filt[i_ori, ...] = out
 
     return filt
 
@@ -224,12 +304,13 @@ def _get_filter_bank():
     # aspect
     gamma = 1
     # phases
-    psis = np.array([np.pi / 2])
+    psi = np.pi / 2
 
     filter_bank = []
 
     for wl in lambdas:
 
+        # set sigma so that bandwidth is 1 octave
         sigma = (
             wl * 1.0 / np.pi * np.sqrt(np.log(2) / 2.0) *
             (
@@ -239,10 +320,11 @@ def _get_filter_bank():
 
         k_size = int(sigma * 6)
 
+        # if the size is even, add one because opencv needs odd
         if np.mod(k_size, 2) == 0:
             k_size += 1
 
-        wl_filt = np.empty((len(thetas), len(psis), k_size, k_size))
+        wl_filt = np.empty((len(thetas), k_size, k_size))
         wl_filt.fill(np.NAN)
 
         for (i_ori, ori) in enumerate(thetas):
@@ -251,19 +333,16 @@ def _get_filter_bank():
             # counter clockwise
             filt_ori = np.mod(-ori - np.pi / 2.0, 2 * np.pi)
 
-            for (i_phase, phase) in enumerate(psis):
+            filt = cv2.getGaborKernel(
+                ksize=(k_size, k_size),
+                sigma=sigma,
+                theta=filt_ori,
+                lambd=wl,
+                gamma=gamma,
+                psi=psi
+            )
 
-                filt = cv2.getGaborKernel(
-                    ksize=(k_size, k_size),
-                    sigma=sigma,
-                    theta=filt_ori,
-                    lambd=wl,
-                    gamma=gamma,
-                    psi=phase
-                )
-
-                wl_filt[i_ori, i_phase, ...] = filt
-
+            wl_filt[i_ori, ...] = filt
 
         filter_bank.append(wl_filt)
 
