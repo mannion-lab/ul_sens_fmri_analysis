@@ -229,32 +229,35 @@ def run_filter():
     # save for SPSS
     spss_path = os.path.join(out_dir, "ul_sens_img_filter_output_spss.txt")
 
-    header = []
+    var_names = []
+    var_types = {}
 
     # header first - a monster loop
     for (i_src, i_horiz, i_chan, i_sf, i_ori) in itertools.product(
         range(n_src), range(n_horiz), range(n_chan), range(n_sf), range(n_ori)
     ):
 
-        header.append(
+        var_name = (
             "_".join(
                 [
-                    str(i_src + 1),
-                    str(i_horiz + 1),
-                    str(i_chan + 1),
-                    str(i_sf + 1),
-                    str(i_ori + 1)
+                    "s_" + str(i_src + 1),
+                    "h_" + str(i_horiz + 1),
+                    "c_" + str(i_chan + 1),
+                    "sf_" + str(i_sf + 1),
+                    "o_" + str(i_ori + 1)
                 ]
             )
         )
 
-    with open(spss_path, "w") as spss_file:
+        var_names.append(var_name)
+        var_types[var_name] = 0
 
-        spss_file.write("\t".join(header))
+#    with open(spss_path, "w") as spss_file:
+    with SavWriter(spss_path, var_names, var_types) as spss_file:
 
         for i_img in range(n_img):
 
-            spss_file.write("\n")
+            img_data = []
 
             for (i_src, i_horiz, i_chan, i_sf, i_ori) in itertools.product(
                 range(n_src), range(n_horiz), range(n_chan), range(n_sf),
@@ -263,7 +266,19 @@ def run_filter():
 
                 data = filt_out[i_img, i_src, i_horiz, i_chan, i_sf, i_ori]
 
+                img_data.append(data)
+
+            spss_file.writerow(img_data)
+
                 spss_file.write("{dv:.10f}\t".format(dv=data))
+
+savFileName = 'someFile.sav'
+records = [[b'Test1', 1, 1], [b'Test2', 2, 1]]
+varNames = ['var1', 'v2', 'v3']
+varTypes = {'var1': 5, 'v2': 0, 'v3': 0}
+with SavWriter(savFileName, varNames, varTypes) as writer:
+        for record in records:
+                    writer.writerow(record)
 
     return filt_out
 
