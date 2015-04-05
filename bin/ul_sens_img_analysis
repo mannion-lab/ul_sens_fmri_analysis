@@ -11,8 +11,14 @@ def main():
     "Parse the command-line input and offload"
 
     proc_options = [
+        "dkl",
         "hist",
         "filter",
+        "hist_stats",
+        "filt_stats",
+        "radial_bias",
+        "correlate",
+        "correlate_filt"
     ]
 
     parser = argparse.ArgumentParser()
@@ -25,13 +31,29 @@ def main():
 
     args = parser.parse_args()
 
+    if args.proc_step == "dkl":
+        ul_sens_analysis.imstats.get_fragments()
 
-    if args.proc_step == "hist":
+    elif args.proc_step == "hist":
         ul_sens_analysis.imstats.calc_hist_stats()
 
     elif args.proc_step == "filter":
         ul_sens_analysis.imstats.run_filter()
 
+    elif args.proc_step == "hist_stats":
+        ul_sens_analysis.imstats.compare_hist_source()
+
+    elif args.proc_step == "filt_stats":
+        ul_sens_analysis.imstats.compare_filter_source()
+
+    elif args.proc_step == "radial_bias":
+        ul_sens_analysis.imstats.test_radial_bias()
+
+    elif args.proc_step == "correlate":
+        ul_sens_analysis.imstats.compare_with_data()
+
+    elif args.proc_step == "correlate_filt":
+        ul_sens_analysis.imstats.compare_filt_with_data()
 
 if __name__ == "__main__":
     main()
