@@ -476,12 +476,129 @@ def load_hist_stats():
     return np.load(hist_path)
 
 
+def compare_hist_source():
+
+    hist = load_hist_stats()
+
+    # average over left/right
+    hist = np.mean(hist, axis=3)
+
+    (n_stat, n_img, n_src, n_chan) = hist.shape
+
+    for i_stat in xrange(n_stat):
+        print "Stat: ", i_stat
+
+        for i_chan in xrange(n_chan):
+            print "\tChan: ", i_chan
+
+            (t, p) = scipy.stats.ttest_ind(
+                hist[i_stat, :, 0, i_chan],
+                hist[i_stat, :, 1, i_chan]
+            )
+
+            print "\t\t", t, p
+
+
+def compare_filter_source():
+
+    filt = load_filter_output()
+
+    # average over left/right
+    filt = np.mean(filt, axis=2)
+
+    (n_img, n_src, n_chan, n_sf, n_ori) = filt.shape
+
+    for i_chan in xrange(n_chan):
+        print "Chan: ", i_chan
+
+        sf = np.mean(filt[:, :, i_chan, :, :], axis=-1)
+
+        print "\tSF:"
+        for i_sf in xrange(n_sf):
+
+            (t, p) = scipy.stats.ttest_ind(
+                sf[:, 0, i_sf],
+                sf[:, 1, i_sf]
+            )
+
+            print "\t\t", t, p
+
+        ori = np.mean(filt[:, :, i_chan, :, :], axis=-2)
+
+        print "\tOri:"
+        for i_ori in xrange(n_ori):
+
+            (t, p) = scipy.stats.ttest_ind(
+                ori[:, 0, i_ori],
+                ori[:, 1, i_ori]
+            )
+
+            print "\t\t", t, p
+
+
+def compare_filt_with_data():
+
+    filt = load_filter_output()
+
+    filt = np.mean(filt, axis=2)
+
+    (n_img, n_src, n_chan, n_sf, n_ori) = filt.shape
+
+    conf = ul_sens_analysis.config.get_conf()
+
+    data_path = os.path.join(
+        conf.base_group_dir,
+        "ul_sens_group_amp{m:s}_data.npy".format(m="")
+    )
+
+    # (subject, ROI, img, pres, src)
+    data = np.load(data_path)
+
+    # average over subjects and ROIs
+    data = np.mean(np.mean(data, axis=0), axis=0)
+
+    # upper - lower
+    data_diff = data[:, 0, :] - data[:, 1, :]
+
+    for i_chan in xrange(3):
+
+        print "Chan: ", i_chan
+
+        sf = np.mean(filt[:, :, i_chan, :, :], axis=-1)
+
+        print "\t\tSF:"
+        for i_sf in xrange(n_sf):
+
+            curr_filt = sf[..., i_sf].flat
+
+            (r, p) = scipy.stats.pearsonr(
+                data_diff.flat,
+                curr_filt
+            )
+
+            print "\t\t\t", i_sf, ", ", r, ", ", p
+
+        ori = np.mean(filt[:, :, i_chan, :, :], axis=-2)
+
+        print "\t\tOri:"
+        for i_ori in xrange(n_ori):
+
+            curr_filt = ori[..., i_ori].flat
+
+            (r, p) = scipy.stats.spearmanr(
+                data_diff.flat,
+                curr_filt
+            )
+
+            print "\t\t\t", i_ori, ", ", r, ", ", p
+
+
 def compare_with_data(stats=None):
 
     conf = ul_sens_analysis.config.get_conf()
 
     if stats is None:
-        stats = calc_stats()
+        stats = load_hist_stats()
 
     # average stats over lr
     stats = np.mean(stats, axis=-2)
@@ -501,15 +618,18 @@ def compare_with_data(stats=None):
     data_diff = data[:, 0, :] - data[:, 1, :]
 
     for i_chan in xrange(3):
-        for i_stat in xrange(3):
+        print "Chan: ", i_chan
+
+        for i_stat in xrange(2):
+
+            print "\tStat: ", i_stat
 
             curr_stats = stats[i_stat, :, :, i_chan].flat
 
-            (r, p) = scipy.stats.pearsonr(
+            (r, p) = scipy.stats.spearmanr(
                 data_diff.flat,
                 curr_stats
             )
 
-            print r, p
-
-
+            print "\t\tr: ", r
+            print "\t\tp: ", p
