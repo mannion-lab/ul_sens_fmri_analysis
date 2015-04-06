@@ -1,11 +1,9 @@
 
 import os
-import itertools
 
 import numpy as np
 import scipy.misc
 import cv2
-import savReaderWriter
 
 import psychopy.monitors
 import psychopy.misc
@@ -13,13 +11,12 @@ import psychopy.filters
 
 import monitors.conversions
 
-import stimuli.utils
-
 import ul_sens_fmri.config
 import ul_sens_analysis.figures
 
 
 def get_fragments():
+    """Extracts and saves the patches in DKL space"""
 
     exp_conf = ul_sens_fmri.config.get_conf()
 
@@ -62,7 +59,7 @@ def get_fragments():
     dkl_frag.fill(np.NAN)
 
     for (i_img, img_id) in enumerate(exp_conf.exp.img_ids):
-        for (i_src, src) in enumerate(["above", "below"]):
+        for (i_src, _) in enumerate(["above", "below"]):
 
             sshot_found = False
 
@@ -150,6 +147,7 @@ def get_fragments():
 
 
 def load_dkl_frags():
+    """Returns the saved DKL patches"""
 
     frag_dir = "/sci/study/ul_sens/imstats"
 
@@ -159,6 +157,7 @@ def load_dkl_frags():
 
 
 def run_filter():
+    """Runs the filter-based analysis of the DKL patches"""
 
     dkl = load_dkl_frags()
     bank = _get_filter_bank()
@@ -167,7 +166,7 @@ def run_filter():
         matrixSize=dkl.shape[-2],
         shape="circle",
         radius=0.9,
-        range=[0,1]
+        range=[0, 1]
     )
 
     (n_img, n_src, n_horiz, _, _, n_chan) = dkl.shape
@@ -223,53 +222,11 @@ def run_filter():
         filt_out
     )
 
-    # save for SPSS
-    spss_path = os.path.join(out_dir, "ul_sens_img_filter_output_spss.sav")
-
-    var_names = []
-    var_types = {}
-
-    # header first - a monster loop
-    for (i_src, i_horiz, i_chan, i_sf, i_ori) in itertools.product(
-        range(n_src), range(n_horiz), range(n_chan), range(n_sf), range(n_ori)
-    ):
-
-        var_name = (
-            "_".join(
-                [
-                    "s_" + str(i_src + 1),
-                    "h_" + str(i_horiz + 1),
-                    "c_" + str(i_chan + 1),
-                    "sf_" + str(i_sf + 1),
-                    "o_" + str(i_ori + 1)
-                ]
-            )
-        )
-
-        var_names.append(var_name)
-        var_types[var_name] = 0
-
-    with savReaderWriter.SavWriter(spss_path, var_names, var_types) as spss_file:
-
-        for i_img in range(n_img):
-
-            img_data = []
-
-            for (i_src, i_horiz, i_chan, i_sf, i_ori) in itertools.product(
-                range(n_src), range(n_horiz), range(n_chan), range(n_sf),
-                range(n_ori)
-            ):
-
-                data = filt_out[i_img, i_src, i_horiz, i_chan, i_sf, i_ori]
-
-                img_data.append(data)
-
-            spss_file.writerow(img_data)
-
     return filt_out
 
 
 def _apply_filter_bank(img, bank):
+    """Applies a filter bank (different oris) to an image"""
 
     n_ori = bank.shape[0]
 
@@ -297,6 +254,7 @@ def _apply_filter_bank(img, bank):
 
 
 def _get_filter_bank():
+    """Returns the filter banks"""
 
     # convert to cpd, for info
     monitor = psychopy.monitors.Monitor("BOLDscreen")
@@ -341,8 +299,8 @@ def _get_filter_bank():
 
         for (i_ori, ori) in enumerate(thetas):
 
-            # change the orientation convention to be 0 at horizontal and increasing angles moving
-            # counter clockwise
+            # change the orientation convention to be 0 at horizontal and
+            # increasing angles moving counter clockwise
             filt_ori = np.mod(-ori - np.pi / 2.0, 2 * np.pi)
 
             filt = cv2.getGaborKernel(
@@ -362,6 +320,7 @@ def _get_filter_bank():
 
 
 def load_filter_output():
+    """Returns the saved filter output"""
 
     filt_path = os.path.join(
         "/sci/study/ul_sens/imstats",
@@ -372,13 +331,14 @@ def load_filter_output():
 
 
 def test_radial_bias():
+    """Compares the 45 and 135 degree orientations for different power"""
 
     filt_out = load_filter_output()
 
     # average over SF
     filt_out = np.mean(filt_out, axis=-2)
 
-    (n_img, n_src, n_horiz, n_chan, n_ori) = filt_out.shape
+    (_, n_src, n_horiz, n_chan, _) = filt_out.shape
 
     for i_chan in xrange(n_chan):
         print "Channel: " + str(i_chan)
@@ -394,7 +354,7 @@ def test_radial_bias():
                 # could use wilcoxon for non-parameteric, but then how to run
                 # other ANOVA based stats is unclear
                 test_meth = scipy.stats.ttest_rel
-                #test_meth = scipy.stats.wilcoxon
+                # test_meth = scipy.stats.wilcoxon
 
                 (t, p) = test_meth(data[:, 1], data[:, 3])
 
@@ -407,16 +367,15 @@ def test_radial_bias():
                 )
 
 
-def calc_hist_stats():
-
-    conf = ul_sens_fmri.config.get_conf()
+def run_hist():
+    """Calculates the luminance and contrast stats from the DKL frags"""
 
     # (image, ab, lr, 353, 353, 3)
     dkl = load_dkl_frags()
 
     (n_img, n_src, n_horiz, _, _, n_chan) = dkl.shape
 
-    stats = np.empty(
+    hist = np.empty(
         (
             2,  # mean, std
             n_img,
@@ -425,13 +384,13 @@ def calc_hist_stats():
             n_chan  # dkl
         )
     )
-    stats.fill(np.NAN)
+    hist.fill(np.NAN)
 
     ap_mask = psychopy.filters.makeMask(
         matrixSize=dkl.shape[-2],
         shape="circle",
         radius=0.8,
-        range=[0,1]
+        range=[0, 1]
     )
 
     for i_img in xrange(n_img):
@@ -451,7 +410,7 @@ def calc_hist_stats():
                     # std
                     frag_std = np.std(frag_vals)
 
-                    stats[:, i_img, i_src, i_h, i_chan] = [
+                    hist[:, i_img, i_src, i_h, i_chan] = [
                         frag_mean,
                         frag_std
                     ]
@@ -461,12 +420,13 @@ def calc_hist_stats():
         "ul_sens_img_hist_output.npy"
     )
 
-    np.save(hist_path, stats)
+    np.save(hist_path, hist)
 
-    return stats
+    return hist
 
 
-def load_hist_stats():
+def load_hist_output():
+    """Loads the histogram-based output"""
 
     hist_path = os.path.join(
         "/sci/study/ul_sens/imstats",
@@ -476,73 +436,14 @@ def load_hist_stats():
     return np.load(hist_path)
 
 
-def compare_hist_source():
-
-    hist = load_hist_stats()
-
-    # average over left/right
-    hist = np.mean(hist, axis=3)
-
-    (n_stat, n_img, n_src, n_chan) = hist.shape
-
-    for i_stat in xrange(n_stat):
-        print "Stat: ", i_stat
-
-        for i_chan in xrange(n_chan):
-            print "\tChan: ", i_chan
-
-            (t, p) = scipy.stats.ttest_ind(
-                hist[i_stat, :, 0, i_chan],
-                hist[i_stat, :, 1, i_chan]
-            )
-
-            print "\t\t", t, p
-
-
-def compare_filter_source():
-
-    filt = load_filter_output()
-
-    # average over left/right
-    filt = np.mean(filt, axis=2)
-
-    (n_img, n_src, n_chan, n_sf, n_ori) = filt.shape
-
-    for i_chan in xrange(n_chan):
-        print "Chan: ", i_chan
-
-        sf = np.mean(filt[:, :, i_chan, :, :], axis=-1)
-
-        print "\tSF:"
-        for i_sf in xrange(n_sf):
-
-            (t, p) = scipy.stats.ttest_ind(
-                sf[:, 0, i_sf],
-                sf[:, 1, i_sf]
-            )
-
-            print "\t\t", t, p
-
-        ori = np.mean(filt[:, :, i_chan, :, :], axis=-2)
-
-        print "\tOri:"
-        for i_ori in xrange(n_ori):
-
-            (t, p) = scipy.stats.ttest_ind(
-                ori[:, 0, i_ori],
-                ori[:, 1, i_ori]
-            )
-
-            print "\t\t", t, p
-
-
 def compare_filt_with_data():
+    """Correlates filter output with upper-lower"""
 
     filt = load_filter_output()
 
     filt = np.mean(filt, axis=2)
 
-    (n_img, n_src, n_chan, n_sf, n_ori) = filt.shape
+    (_, _, n_chan, n_sf, n_ori) = filt.shape
 
     conf = ul_sens_analysis.config.get_conf()
 
@@ -560,7 +461,7 @@ def compare_filt_with_data():
     # upper - lower
     data_diff = data[:, 0, :] - data[:, 1, :]
 
-    for i_chan in xrange(3):
+    for i_chan in xrange(n_chan):
 
         print "Chan: ", i_chan
 
@@ -593,15 +494,15 @@ def compare_filt_with_data():
             print "\t\t\t", i_ori, ", ", r, ", ", p
 
 
-def compare_with_data(stats=None):
+def compare_hist_with_data():
+    """Correlates histogram output with upper-lower"""
 
     conf = ul_sens_analysis.config.get_conf()
 
-    if stats is None:
-        stats = load_hist_stats()
+    hist = load_hist_output()
 
-    # average stats over lr
-    stats = np.mean(stats, axis=-2)
+    # average hist over lr
+    hist = np.mean(hist, axis=-2)
 
     data_path = os.path.join(
         conf.base_group_dir,
@@ -624,11 +525,11 @@ def compare_with_data(stats=None):
 
             print "\tStat: ", i_stat
 
-            curr_stats = stats[i_stat, :, :, i_chan].flat
+            curr_hist = hist[i_stat, :, :, i_chan].flat
 
             (r, p) = scipy.stats.spearmanr(
                 data_diff.flat,
-                curr_stats
+                curr_hist
             )
 
             print "\t\tr: ", r
