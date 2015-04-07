@@ -1,6 +1,7 @@
 
 import os
 import tempfile
+import string
 
 import figutils
 import matplotlib
@@ -20,6 +21,7 @@ import ul_sens_analysis.config
 import ul_sens_analysis.group
 import ul_sens_fmri.config
 import ul_sens_fmri.stim
+import ul_sens_analysis.imstats
 
 
 def plot_resp_amp(save_path=None, loc_mask=True):
@@ -649,3 +651,206 @@ def plot_top_resp_diff(save_path=None):
         os.remove(tmp_file)
         os.remove(tmp_file + ".png")
         os.remove(tmp_file + ".svg")
+
+
+def plot_corr(save_path=None):
+
+    conf = ul_sens_fmri.config.get_conf()
+    conf.ana = ul_sens_analysis.config.get_conf()
+
+    filt = ul_sens_analysis.imstats.load_filter_output()
+    # average over LR
+    filt = np.mean(filt, axis=2)
+    sf_filt = np.mean(filt, axis=-1)
+    ori_filt = np.mean(filt, axis=-2)
+
+    hist = ul_sens_analysis.imstats.load_hist_output()
+    hist = np.mean(hist, axis=-2)
+
+    data = np.load(
+        "/sci/study/ul_sens/group_data/ul_sens_group_amp_data.npy"
+    )
+    # average over subjects and ROIs
+    data = np.mean(np.mean(data, axis=0), axis=0)
+    # calculate upper - lower
+    data_diff = data[:, 0, :] - data[:, 1, :]
+
+    svgs = []
+
+    # hist first
+    curr_save_path = save_path + "_lum_mean.svg"
+    _plot_corr(
+        curr_save_path,
+        data_diff,
+        hist[0, :, :, 0],  # 0=mean, 0=lum
+        "Luminance (mean)"
+
+    )
+    svgs.append(curr_save_path)
+
+    # now the filts
+    i_sf_filts = [0, 1]
+    sf_descrip = ["Filter output (1 cpd)", "Filter output (2 cpd)"]
+    for i_sf_filt in i_sf_filts:
+
+        curr_save_path = save_path + "_filt_sf_{n:d}.svg".format(n=i_sf_filt)
+        _plot_corr(
+            curr_save_path,
+            data_diff,
+            sf_filt[:, :, 0, i_sf_filt],
+            sf_descrip[i_sf_filt]
+        )
+        svgs.append(curr_save_path)
+
+    i_ori_filts = [1, 2, 3]
+    ori_descrip = [
+        "Filter output ({x:d} deg)".format(x=x)
+        for x in [45, 90, 135]
+    ]
+    for (i_ori_filt, descrip) in zip(i_ori_filts, ori_descrip):
+
+        curr_save_path = save_path + "_filt_ori_{n:d}.svg".format(n=i_ori_filt)
+        _plot_corr(
+            curr_save_path,
+            data_diff,
+            ori_filt[:, :, 0, i_ori_filt],
+            descrip
+        )
+        svgs.append(curr_save_path)
+
+    fig = sg.SVGFigure("13.7cm", "8.5cm")
+
+    h_off = 165
+    v_off = 150
+
+    plots = []
+    texts = []
+
+    alphabet = string.letters
+
+    for i_row in xrange(2):
+        for i_col in xrange(3):
+
+            curr_h_off = i_col * h_off
+            curr_v_off = i_row * v_off + 10
+
+            i_curr = i_row * 3 + i_col
+
+            text = sg.TextElement(
+                curr_h_off + 4,
+                curr_v_off - 0,
+                alphabet[i_curr],
+                size=11,
+                font="FreeSans",
+                weight="bold"
+            )
+
+            texts.append(text)
+
+            curr_fig = sg.fromfile(svgs[i_curr])
+            curr_plot = curr_fig.getroot()
+            curr_plot.moveto(curr_h_off, curr_v_off, scale=1.25)
+
+            plots.append(curr_plot)
+
+    #fig.append([v1_plot, v2_plot, v3_plot])
+    fig.append(plots)
+    _ = [fig.append(text) for text in texts]
+
+    fig.save(save_path + ".svg")
+
+    figutils.svg_to_pdf(
+        svg_path=save_path + ".svg",
+        pdf_path=save_path + ".pdf"
+    )
+
+def _plot_corr(save_path, diff_data, img_data, img_type=""):
+
+    # diff_data is (img, src)
+    # img_data is (img, src)
+
+    conf = ul_sens_fmri.config.get_conf()
+    conf.ana = ul_sens_analysis.config.get_conf()
+
+    h_off = 0.3
+    v_off = 0.3
+    h_max = 0.94
+    v_max = 0.97
+    v_lower_max = v_off + 0.0
+
+    (fig, ax_base, ax_plt) = figutils.setup_panel(
+        size=(1.6, 1.4),
+        offsets=(h_off, v_off),
+        scales=(h_max, v_max, v_lower_max),
+        draw_dashes=False
+    )
+
+    symbols = ["o", "s"]
+    labels = ["Above", "Below"]
+    colours = conf.ana.source_colours
+    marker_size = 20 / 2
+
+    for i_src in xrange(2):
+
+        ax_plt.scatter(
+            img_data[:, i_src],
+            diff_data[:, i_src],
+            facecolor=np.zeros(4), #None, #colours[i_src],
+            edgecolor=colours[i_src], #[1] * 3,
+            s=marker_size,
+            zorder=100,
+            marker=symbols[i_src],
+            label=labels[i_src]
+        )
+
+    if "mean" not in img_type:
+
+        xlim = ax_plt.get_xlim()
+        ax_plt.set_xlim([0, xlim[1]])
+        ax_plt.plot([0, xlim[1]], [0, 0], "k--", zorder=-100)
+        ax_plt.set_xlim([0, xlim[1]])
+
+    else:
+        xlim = ax_plt.get_xlim()
+        ax_plt.plot(xlim, [0, 0], "k--", zorder=-100)
+        ax_plt.set_xlim(xlim)
+
+
+    ylim = ax_plt.get_ylim()
+    ylim = np.max(np.abs(ylim))
+    ax_plt.set_ylim([-ylim, ylim])
+
+    ax_base.set_ylim([-ylim - 0.01, -ylim])
+
+    ax_base.set_xlabel(img_type)
+
+    if "mean" in img_type:
+        ax_base.set_xticks([-2, -1, 0, 1, 2])
+
+    else:
+        xlim = ax_base.get_xlim()
+        ax_base.set_xlim([0, xlim[1]])
+        xticks = ax_base.get_xticks()
+        ax_base.set_xticks([xticks[0], xticks[-1]])
+
+    #ax_base.set_xlim([-0.5, 1.5])
+    #ax_base.set_xticks(range(2))
+    #ax_base.set_xticklabels(["Upper", "Lower"])
+
+    ax_plt.set_ylabel("Upper - lower (psc)", y=0.45)
+
+    leg = plt.legend(
+        scatterpoints=1,
+        loc=(-0.05, -0.),
+        handletextpad=0,
+        ncol=2,
+        mode=None,
+        columnspacing=0.5
+    )
+    leg.draw_frame(False)
+
+    if save_path:
+        plt.savefig(save_path)
+
+    plt.close(fig)
+

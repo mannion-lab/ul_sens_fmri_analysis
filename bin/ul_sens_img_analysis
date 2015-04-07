@@ -15,7 +15,7 @@ def main():
         "hist",
         "filter",
         "radial_bias",
-        "correlate",
+        "correlate_hist",
         "correlate_filt"
     ]
 
