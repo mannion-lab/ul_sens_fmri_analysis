@@ -19,7 +19,8 @@ def main():
         "resp_diff",
         "resid",
         "task",
-        "resp_amp_rois_ret_roi"
+        "resp_amp_rois_ret_roi",
+        "corr"
     ]
 
     parser = argparse.ArgumentParser()
@@ -85,6 +86,16 @@ def main():
             save_path=save_path,
             loc_mask=False
         )
+
+    elif args.proc_step == "corr":
+        save_path = os.path.join(
+            conf.base_fig_dir,
+            "ul_sens_resp_corr_imstats"
+        )
+        ul_sens_analysis.figures.plot_corr(
+            save_path=save_path
+        )
+
 
 if __name__ == "__main__":
     main()
