@@ -93,3 +93,60 @@ Top response differences
 Plot the image fragments that evoked the top 5 largest differences between upper and lower visual field presentation (both signs)::
 
     ul_sens_group_figures resp_diff
+
+
+Images
+------
+
+Extract and convert to DKL
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Saves the image fragments; image x source (above, below) x side (left, right) x rows x columns x (lum, r-g, b-y).
+Data are saved in ``ul_sens_img_frags_dkl.npy``::
+
+    ul_sens_img_analysis dkl
+
+
+Run the histogram analysis
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Computes the histogram stats on the fragments; stat (mean, std) x image x source (above, below) x side (left, right) x channel (lum, r-g, b-y).
+Saves the data to ``ul_sens_img_hist_output.npy``::
+
+    ul_sens_img_analysis hist
+
+Run the filter analysis
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Computes the filter stats on the fragments; image x source x side x channel x SF x orientation.
+Saves the data to ``ul_sens_img_filter_output.npy``::
+
+    ul_sens_img_analysis filter
+
+Test for radial bias
+~~~~~~~~~~~~~~~~~~~~
+
+Uses the filter stats to compare radial and tangential orientation content, and prints the output to the screen::
+
+    ul_sens_img_analysis radial_bias
+
+
+Correlate histogram with data
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Compares the histogram stats with the observed fMRI difference between the upper and lower visual fields::
+
+    ul_sens_img_analysis correlate_hist
+
+
+Correlate filter with data
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Compares the filter-based stats with the observed fMRI difference between the upper and lower visual fields::
+
+    ul_sens_img_analysis correlate_filt
+
+
+
+
+
