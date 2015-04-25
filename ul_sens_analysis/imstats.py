@@ -493,6 +493,8 @@ def compare_filt_with_data():
 
             print "\t\t\t", i_ori, ", ", r, ", ", p
 
+    return (data_diff, filt)
+
 
 def compare_hist_with_data():
     """Correlates histogram output with upper-lower"""
