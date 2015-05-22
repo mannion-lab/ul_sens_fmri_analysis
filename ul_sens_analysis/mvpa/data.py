@@ -10,6 +10,44 @@ import ul_sens_fmri.config
 import runcmd
 
 
+def get_all_mvpa_beta_data():
+    """This is useful for double-checking with the group PSC data"""
+
+    conf = ul_sens_fmri.config.get_conf()
+    conf.ana = ul_sens_analysis.config.get_conf()
+
+    n_subj = len(conf.ana.subj_info)
+
+    beta_data = np.empty(
+        (
+            n_subj,
+            conf.exp.n_img,
+            2,  # pres loc
+            conf.exp.n_src_locs
+        )
+    )
+    beta_data.fill(np.NAN)
+
+    for (i_subj, subj_info) in enumerate(conf.ana.subj_info):
+
+        for (i_vf, vf) in enumerate(("upper", "lower")):
+
+            subj_data = get_mvpa_data(
+                subj_id=subj_info[0],
+                acq_date=subj_info[1],
+                vf=vf
+            )[0]["V1"]
+
+            # average over nodes
+            subj_data = np.mean(subj_data, axis=-1)
+            # and runs
+            subj_data = np.mean(subj_data, axis=-1)
+
+            beta_data[i_subj, :, i_vf, :] = subj_data
+
+    return beta_data
+
+
 def get_mvpa_data(subj_id, acq_date, vf):
 
     conf = ul_sens_fmri.config.get_conf()

@@ -5,6 +5,7 @@
 import argparse
 
 import ul_sens_analysis.resid
+import ul_sens_analysis.mvpa.glm
 
 
 def main():
@@ -12,6 +13,7 @@ def main():
 
     proc_options = [
         "resid",
+        "mvpa_glm"
     ]
 
     parser = argparse.ArgumentParser()
@@ -29,6 +31,8 @@ def main():
 
     if args.proc_step == "resid":
         ul_sens_analysis.resid.run(args.subj_id, args.acq_date)
+    elif args.proc_step == "mvpa_glm":
+        ul_sens_analysis.mvpa.glm.run(args.subj_id, args.acq_date)
 
 
 if __name__ == "__main__":
