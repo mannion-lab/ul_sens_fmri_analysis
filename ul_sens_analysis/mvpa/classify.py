@@ -20,8 +20,7 @@ def run(subj_id, acq_date, subj_data=None):
             2,  # pres loc (upper, lower),
             conf.exp.n_img,
             conf.exp.n_src_locs,  # (above, below)
-            2,  # (above, below) predicted
-            conf.ana.n_mvpa_steps
+            2  # (above, below) predicted
         )
     )
 
@@ -57,70 +56,57 @@ def run(subj_id, acq_date, subj_data=None):
                 run_std[np.newaxis, np.newaxis, ...]
             )
 
-            n_nodes = np.round(
-                np.linspace(
-                    50,
-                    len(loc_data),
-                    conf.ana.n_mvpa_steps,
-                    endpoint=False
-                )
-            )
+            node_k = len(loc_data)
 
-            # get the indices that would sort the localiser data, in descending
-            # order
-            i_node_sort = np.argsort(loc_data)[::-1]
+            for i_img in xrange(conf.exp.n_img):
 
-            for (i_node_k, node_k) in enumerate(n_nodes):
+                # pull out the data where we are at now; that is, source
+                # location (above, below) x runs (all)
+                curr_beta = beta_data[i_img, ...]
 
-                for i_img in xrange(conf.exp.n_img):
+                for i_test_run in xrange(conf.exp.n_runs):
 
-                    # pull out the data where we are at now; that is, source
-                    # location (above, below) x runs (all) x nodes
-                    curr_beta = beta_data[i_img, ...][..., i_node_sort[:node_k]]
+                    # exclude the current 'test' run
+                    i_train_runs = np.setdiff1d(
+                        range(conf.exp.n_runs),
+                        [i_test_run]
+                    )
 
-                    for i_test_run in xrange(conf.exp.n_runs):
-
-                        # exclude the current 'test' run
-                        i_train_runs = np.setdiff1d(
-                            range(conf.exp.n_runs),
-                            [i_test_run]
+                    train_data = np.empty(
+                        (
+                            len(i_train_runs) * conf.exp.n_src_locs,
+                            node_k
                         )
+                    )
+                    train_data.fill(np.NAN)
 
-                        train_data = np.empty(
-                            (
-                                (len(i_train_runs) - 1) * conf.exp.n_src_locs,
-                                node_k
-                            )
-                        )
-                        train_data.fill(np.NAN)
+                    train_labels = np.empty(train_data.shape[0])
+                    train_labels.fill(np.NAN)
 
-                        train_labels = np.empty(train_data.shape[0])
-                        train_labels.fill(np.NAN)
+                    i_flat = 0
+                    for i_train_run in i_train_runs:
 
-                        i_flat = 0
-                        for i_train_run in i_train_runs:
+                        for (i_sl, sl_label) in enumerate([0, 1]):
 
-                            for (i_sl, sl_label) in enumerate([0, 1]):
+                            train_data[i_flat, :] = curr_beta[
+                                i_sl,
+                                i_train_run,
+                                :
+                            ]
 
-                                train_data[i_flat, :] = curr_beta[
-                                    i_sl,
-                                    i_train_run,
-                                    :
-                                ]
+                            train_labels[i_flat] = sl_label
 
-                                train_labels[i_flat] = sl_label
+                            i_flat += 1
 
-                                i_flat += 1
+                    svm = sklearn.svm.SVC(kernel="linear")
 
-                        svm = sklearn.svm.SVC(kernel="linear")
+                    svm.fit(train_data, train_labels)
 
-                        svm.fit(train_data, train_labels)
+                    curr_pred = svm.predict(curr_beta[:, i_test_run, :])
 
-                        curr_pred = svm.predict(curr_beta[:, i_test_run, :])
+                    for (true_val, pred_val) in zip([0, 1], curr_pred):
 
-                        for (true_val, pred_val) in zip([0, 1], curr_pred):
-
-                            cm[i_roi, i_vf, i_img, true_val, pred_val, i_node_k] += 1
+                        cm[i_roi, i_vf, i_img, true_val, pred_val] += 1
 
     return cm
 
