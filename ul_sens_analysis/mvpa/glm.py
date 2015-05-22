@@ -8,7 +8,6 @@ import fmri_tools.utils
 
 import ul_sens_analysis.config
 import ul_sens_fmri.config
-import runcmd
 
 
 def run(subj_id, acq_date):
@@ -58,7 +57,6 @@ def _run_glm(subj_id, acq_date, conf, log_dir, glm_dir):
 
         cond_details = _write_onsets(
             subj_id=subj_id,
-            acq_date=acq_date,
             conf=conf,
             vf=vf,
             log_dir=log_dir
@@ -114,7 +112,7 @@ def _run_glm(subj_id, acq_date, conf, log_dir, glm_dir):
     os.chdir(cwd)
 
 
-def _write_onsets(subj_id, acq_date, conf, vf, log_dir):
+def _write_onsets(subj_id, conf, vf, log_dir):
 
     if vf == "upper":
         i_vf = 0
@@ -138,8 +136,6 @@ def _write_onsets(subj_id, acq_date, conf, vf, log_dir):
         for run_num in run_num_range
     ]
 
-    inf_str = subj_id + "_ul_sens_" + acq_date
-
     details = []
 
     # image ID
@@ -152,8 +148,7 @@ def _write_onsets(subj_id, acq_date, conf, vf, log_dir):
             for (i_run, run_seq) in enumerate(run_seqs):
 
                 # this is the file to write
-                name = "{s:s}-{v:s}_{sl:s}_{i:d}_{r:d}".format(
-                    s=inf_str,
+                name = "{v:s}_{sl:s}_{i:d}_{r:d}".format(
                     v=vf,
                     sl=sl,
                     i=img_id,
