@@ -58,37 +58,36 @@ def run(subj_id, acq_date, subj_data=None):
 
             node_k = len(loc_data)
 
-            for i_img in xrange(conf.exp.n_img):
+            for i_test_run in xrange(conf.exp.n_runs):
 
-                # pull out the data where we are at now; that is, source
-                # location (above, below) x runs (all)
-                curr_beta = beta_data[i_img, ...]
+                # exclude the current 'test' run
+                i_train_runs = np.setdiff1d(
+                    range(conf.exp.n_runs),
+                    [i_test_run]
+                )
 
-                for i_test_run in xrange(conf.exp.n_runs):
-
-                    # exclude the current 'test' run
-                    i_train_runs = np.setdiff1d(
-                        range(conf.exp.n_runs),
-                        [i_test_run]
+                train_data = np.empty(
+                    (
+                        len(i_train_runs) *
+                        conf.exp.n_src_locs *
+                        conf.exp.n_img,
+                        node_k
                     )
+                )
+                train_data.fill(np.NAN)
 
-                    train_data = np.empty(
-                        (
-                            len(i_train_runs) * conf.exp.n_src_locs,
-                            node_k
-                        )
-                    )
-                    train_data.fill(np.NAN)
+                train_labels = np.empty(train_data.shape[0])
+                train_labels.fill(np.NAN)
 
-                    train_labels = np.empty(train_data.shape[0])
-                    train_labels.fill(np.NAN)
+                i_flat = 0
+                for i_train_run in i_train_runs:
 
-                    i_flat = 0
-                    for i_train_run in i_train_runs:
+                    for i_img in xrange(conf.exp.n_img):
 
-                        for (i_sl, sl_label) in enumerate([0, 1]):
+                        for (i_sl, sl_label) in enumerate([-1, 1]):
 
-                            train_data[i_flat, :] = curr_beta[
+                            train_data[i_flat, :] = beta_data[
+                                i_img,
                                 i_sl,
                                 i_train_run,
                                 :
@@ -98,15 +97,28 @@ def run(subj_id, acq_date, subj_data=None):
 
                             i_flat += 1
 
-                    svm = sklearn.svm.SVC(kernel="linear")
+                svm = sklearn.svm.SVC(kernel="linear")
 
-                    svm.fit(train_data, train_labels)
+                svm.fit(train_data, train_labels)
 
-                    curr_pred = svm.predict(curr_beta[:, i_test_run, :])
+                # testing
+                for i_img in xrange(conf.exp.n_img):
 
-                    for (true_val, pred_val) in zip([0, 1], curr_pred):
+                    curr_pred = svm.predict(beta_data[i_img, :, i_test_run, :])
 
-                        cm[i_roi, i_vf, i_img, true_val, pred_val] += 1
+                    for (true_val, pred_val) in zip([-1, 1], curr_pred):
+
+                        if true_val == -1:
+                            i_true = 0
+                        else:
+                            i_true = 1
+
+                        if pred_val == -1:
+                            i_pred = 0
+                        else:
+                            i_pred = 1
+
+                        cm[i_roi, i_vf, i_img, i_true, i_pred] += 1
 
     return cm
 
