@@ -117,10 +117,12 @@ def get_mvpa_data(subj_id, acq_date, vf):
     for (roi_num, roi_name) in zip(conf.ana.roi_numbers, conf.ana.roi_names):
 
         # find the nodes in the ROI
-        in_roi = (beta_data[:, 0] == roi_num)
+        in_roi = (beta_data[:, 0].astype("int") == int(roi_num))
 
         # check that the localiser agrees
-        assert np.all(in_roi == (loc_t_data[:, 0] == roi_num))
+        assert np.all(
+            in_roi == (loc_t_data[:, 0].astype("int") == int(roi_num))
+        )
 
         n_roi_nodes = np.sum(in_roi)
 
@@ -144,7 +146,13 @@ def get_mvpa_data(subj_id, acq_date, vf):
 
         for (i_col, dset_label) in enumerate(dset_labels):
 
-            dset_params = dset_label.split("_")
+            # if it's one of the noise regressors, move along
+            if dset_label[:3] == "Run":
+
+                assert ("Pol" in dset_label)
+                continue
+
+            dset_params = dset_label.split("#")[0].split("_")
 
             (curr_vf, curr_sl, curr_id, curr_run) = dset_params
 
@@ -158,7 +166,7 @@ def get_mvpa_data(subj_id, acq_date, vf):
             else:
                 raise ValueError()
 
-            i_id = conf.exp.img_ids.index(int(curr_id))
+            i_id = list(conf.exp.img_ids).index(int(curr_id))
 
             i_run = int(curr_run) - 1
 
